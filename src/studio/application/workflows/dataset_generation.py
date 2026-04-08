@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from studio.application.services.dataset_service import DatasetGenerationRequest, DatasetService
-from studio.application.services.export_service import ExportService
-from studio.domain.models.source_documents import SourceDocument
+from src.studio.application.services.dataset_service import DatasetGenerationRequest, DatasetService
+from src.studio.application.services.export_service import ExportService
+from src.studio.domain.models.source_documents import SourceDocument
 
 
 @dataclass(slots=True)

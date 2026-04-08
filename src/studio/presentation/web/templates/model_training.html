@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %} Model Training {% endblock %}
+
+{% block content %}
+<head>
+  <style>
+    .radio-group {
+      display: flex;          /* puts items in one horizontal line */
+      gap: 10px;              /* space between the options */
+    }
+
+    .radio-group label {
+      cursor: pointer;        /* makes text clickable */
+    }
+  </style>
+</head>
+
+<h1>Configure Model Training</h1>
+<div class="radio-group">
+    <input type="radio" id="decoder" name="enc_dec" value="Decoder" checked>
+    <label for="decoder">Decoder</label>
+
+    <input type="radio" id="encoder" name="enc_dec" value="Encoder">
+    <label for="encoder">Encoder</label>
+
+</div>
+<div id="encoder-form" style="display:none; margin-top:20px;">
+    <form method="POST" action="" id="encoder-train-form">
+        {% csrf_token %}
+        <label for="model_name">Model Name</label>
+        <select id="encoder_model_name" name="model_name">
+        <option value="bert-base-uncased">BERT</option>
+        </select>
+        <br>
+        <label>Learning Rate:</label>
+        <input type="number" step="0.00001" name="learning_rate" value="2e-5">
+        <br>
+        <label>Number of Epochs:</label>
+        <input type="number" name="num_epochs" value="3">
+        <br>
+        <label>Batch Size:</label>
+        <input type="number" name="batch_size" value="1">
+        <br>
+        <label for="model_repo">Model Repository Name:</label>
+        <input type="text" name="model_repo" placeholder="e.g., OpenFinAL/your-model-name">
+        <br>
+
+        <!-- Dataset Selection -->
+        <label for="dataset_name">Dataset Name:</label>
+        <input type="text" id="dataset_name" name="dataset_name" placeholder="e.g., FinGPT/fingpt-fiqa_qa"
+            value="FinGPT/fingpt-fiqa_qa">
+        <br>
+
+        <!-- Train-Test Split Ratio -->
+        <label for="train_test_split_ratio">Train-Test Split Ratio:</label>
+        <input type="number" step="0.01" id="train_test_split_ratio" name="train_test_split_ratio" value="0.1" min="0.01"
+            max="0.99">
+        <br>
+        <button type="submit">Start Training</button>
+    </form>
+</div>
+
+<div id="decoder-form" style="margin-top:20px;">
+<form method="POST" action="" id="train-form">
+    {% csrf_token %}
+    <label for="model_name">Model Name</label>
+    <select id="model_name" name="model_name">
+        <option value="gpt2">GPT-2</option>
+        <option value="HuggingFaceTB/SmolLM2-360M-Instruct">SmolLM2-360M-Instruct</option>
+        <option value="apple/OpenELM-270M-Instruct">apple/OpenELM-270M-Instruct</option>
+        <option value="facebook/opt-350m">FACEBOOK-OPT-350M</option>
+        <option value="meta-llama/Llama-3.2-1B-Instruct">meta-llama/Llama-3.2-1B-Instruct</option>
+        <option value="meta-llama/Llama-3.2-3B-Instruct">meta-llama/Llama-3.2-3B-Instruct</option>
+        <option value="google/gemma-2-2b-it">google/gemma-2-2b-it</option>
+        <option value="other">Other</option>
+    </select>
+    <input type="text" id="custom_model_name" name="custom_model_name" placeholder="e.g., meta-llama/Llama-3-8b">
+    <br>
+
+    <label for="learning_rate">Learning Rate:</label>
+    <input type="number" step="0.00001" name="learning_rate" value="2e-5">
+    <br>
+
+    <label for="num_epochs">Number of Epochs:</label>
+    <input type="number" name="num_epochs" value="3">
+    <br>
+
+    <label for="batch_size">Batch Size:</label>
+    <input type="number" name="batch_size" value="1">
+    <br>
+
+    <label for="weight_decay">Weight Decay:</label>
+    <input type="number" step="0.00001" name="weight_decay" value="0.01">
+    <br>
+
+    <label for="gradient_checkpointing">Use Gradient Checkpointing:</label>
+    <input type="checkbox" name="gradient_checkpointing" checked>
+    <br>
+
+    <label for="max_grad_norm">Max Gradient Norm:</label>
+    <input type="number" name="max_grad_norm" value="1.0">
+    <br>
+
+    <label for="precision">Precision:</label>
+    <select id="precision" name="precision">
+        <option value="fp32" selected>FP32 (Default)</option>
+        <option value="fp16">FP16</option>
+        <option value="bf16">BF16</option>
+    </select>
+    <br>
+
+    <input type="hidden" id="fp16" name="fp16" value="off">
+    <input type="hidden" id="bf16" name="bf16" value="off">
+    <br>
+
+    <label for="use_lora">Use LoRA:</label>
+    <input type="checkbox" name="use_lora">
+
+    <label for="use_qlora">Use QLoRA (for models ≥1.3B parameters):</label>
+    <input type="checkbox" name="use_qlora">
+
+    <label for="project_name">W&B Project Name:</label>
+    <input type="text" name="project_name" value="your_project_name">
+    <br>
+
+    <label>
+        W&B API Key (Leave blank to use default):
+        <input type="text" name="wandb_key" />
+    </label>
+    <br>
+
+    <label>
+        Hugging Face API Key (Leave blank to use default):
+        <input type="text" name="hf_key" />
+    </label>
+    <br>
+
+    <label for="model_repo">Model Repository Name:</label>
+    <input type="text" name="model_repo" placeholder="e.g., OpenFinAL/your-model-name">
+    <br>
+
+    <!-- Dataset Selection -->
+    <label for="dataset_name">Dataset Name:</label>
+    <input type="text" id="dataset_name" name="dataset_name" placeholder="e.g., FinGPT/fingpt-fiqa_qa"
+        value="FinGPT/fingpt-fiqa_qa">
+    <br>
+
+        <label>
+            W&B API Key (Leave blank to use default):
+            <input type="text" name="wandb_key" />
+        </label>
+        <br>
+
+        <label>
+            Hugging Face API Key (Leave blank to use default):
+            <input type="text" name="hf_key" />
+        </label>
+        <br>
+
+    <!-- Train-Test Split Ratio -->
+    <label for="train_test_split_ratio">Train-Test Split Ratio:</label>
+    <input type="number" step="0.01" id="train_test_split_ratio" name="train_test_split_ratio" value="0.1" min="0.01"
+        max="0.99">
+    <br>
+
+    <button type="submit">Start Training</button>
+</form>
+</div>
+
+<h2>Training Logs</h2>
+<div id="log-container">Waiting for logs...</div>
+
+<script>
+    const encoderRadio = document.getElementById("encoder");
+    // track whether Encoder form is active
+    let isEncoder = encoderRadio.checked;
+    encoderRadio.addEventListener("change", e => {
+        isEncoder = encoderRadio.checked;
+        console.log("Is Encoder Training:", isEncoder);
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const modelNameSelect = document.getElementById('model_name');
+        const customModelInput = document.getElementById('custom_model_name');
+
+        // Initialize hidden precision fields
+        document.getElementById('fp16').value = 'off';
+        document.getElementById('bf16').value = 'off';
+
+        // Handle precision selection dynamically
+        document.getElementById('precision').addEventListener('change', function () {
+            const precision = this.value;
+            document.getElementById('fp16').value = (precision === 'fp16') ? 'on' : 'off';
+            document.getElementById('bf16').value = (precision === 'bf16') ? 'on' : 'off';
+        });
+
+        // Radio toggle logic
+        // const encoderRadio = document.getElementById("encoder");
+        const decoderRadio = document.getElementById("decoder");
+        const encoderForm = document.getElementById("encoder-form");
+        const decoderForm = document.getElementById("decoder-form");
+
+        function updateFormVisibility() {
+            // Keep the isEncoder flag in sync with the visible form
+            isEncoder = encoderRadio.checked;
+            if (isEncoder) {
+                encoderForm.style.display = "block";
+                decoderForm.style.display = "none";
+            } else {
+                encoderForm.style.display = "none";
+                decoderForm.style.display = "block";
+                activateOtherModelLogic();
+            }
+        }
+
+        encoderRadio.addEventListener("change", updateFormVisibility);
+        decoderRadio.addEventListener("change", updateFormVisibility);
+        updateFormVisibility();
+        console.log("Is Encoder");
+        console.log("Is Encoder Training:", encoderRadio.checked);
+
+        function activateOtherModelLogic() {
+            // Handle model name selection to show/hide custom model input
+            customModelInput.style.display = 'none'; // Hide by default
+            modelNameSelect.addEventListener('change', function () {
+                if (this.value === 'other') {
+                    customModelInput.style.display = 'block';
+                } else {
+                    customModelInput.style.display = 'none';
+                    customModelInput.value = ''; // Clear custom input when not in use
+                }
+            });
+        }
+        const form = document.getElementById("train-form") 
+        const encoder_form = document.getElementById("encoder-train-form");
+        const logContainer = document.getElementById("log-container");
+        let eventSource;
+        console.log("Hello World 1");
+        function handleSubmit(event) {
+            console.log("Hello World 2");
+
+            event.preventDefault(); // Prevent default form submission
+
+            // If "Other" is selected, use custom_model_name as model_name
+            if (modelNameSelect && modelNameSelect.value === 'other') {
+                const customModelName = customModelInput.value.trim();
+                if (!customModelName) {
+                    logContainer.textContent = "❌ Error: Please enter a valid model name.\n";
+                    return;
+                }
+                modelNameSelect.value = customModelName; // Override model_name with custom input
+            }
+
+            logContainer.textContent = "🚀 Training started...\n"; // Reset logs
+
+            // Close previous SSE connection if active
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+
+            // Send form data to start training (use existing Django routes)
+            console.log("Is Encoder Training:", isEncoder);
+            const endpoint = isEncoder ? "/api/train_encoder/" : "/api/train_model/";
+            const body = isEncoder ? new FormData(encoder_form) : new FormData(form);
+            fetch(endpoint, {
+                method: "POST",
+                body: body,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    logContainer.textContent += "✅ Training initiated successfully.\n";
+                    startLogStreaming(); // Start real-time log streaming
+                } else {
+                    logContainer.textContent += `❌ Error: ${data.message}\n`;
+                }
+            })
+            .catch(error => {
+                logContainer.textContent += `⚠️ Request failed: ${error}\n`;
+            });
+        }
+
+        // Attach submit handler to both forms so either encoder or decoder submission is handled
+        form.addEventListener("submit", handleSubmit);
+        encoder_form.addEventListener("submit", handleSubmit);
+
+        function startLogStreaming() {
+            if (eventSource) eventSource.close(); // Close existing connection
+
+            eventSource = new EventSource("/api/stream-training/");
+
+            eventSource.onmessage = function (event) {
+                logContainer.innerHTML += `<pre>${event.data}</pre>`;
+                logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll to latest log
+            };
+
+            eventSource.onerror = function () {
+                logContainer.innerHTML += `<pre>⚠️ Connection lost. Retrying...</pre>`;
+                eventSource.close();
+                setTimeout(startLogStreaming, 3000); // Attempt reconnect after 3s
+            };
+        }
+        startLogStreaming(); // Start real-time log streaming
+    });
+</script>
+
+{% endblock %}

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from studio.application.services.document_service import DocumentService, ScrapedPayload
+from src.studio.application.services.document_service import DocumentService, ScrapedPayload
 
 
 @dataclass(slots=True)

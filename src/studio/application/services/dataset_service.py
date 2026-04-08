@@ -6,9 +6,9 @@ import json
 import re
 from dataclasses import dataclass
 
-from studio.application.services.document_service import DocumentService
-from studio.domain.models.source_documents import SourceDocument
-from studio.domain.policies.dataset_rules import validate_dataset_request
+from src.studio.application.services.document_service import DocumentService
+from src.studio.domain.models.source_documents import SourceDocument
+from src.studio.domain.policies.dataset_rules import validate_dataset_request
 
 
 @dataclass(slots=True)
