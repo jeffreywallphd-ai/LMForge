@@ -1,0 +1,155 @@
+{
+  "schema_version": "1.0",
+  "generated_on": "2026-04-08",
+  "scope": {
+    "included": [
+      "src/**",
+      "manage.py",
+      "requirements.txt"
+    ],
+    "excluded": [
+      "Sandbox/**",
+      "AIAgent/**",
+      "lmforge/**",
+      "README.md",
+      "documentation/**"
+    ]
+  },
+  "project": {
+    "name": "LMForge",
+    "runtime": "Django + DRF",
+    "entrypoints": [
+      "manage.py",
+      "src/config/urls.py",
+      "src/studio/presentation/api/urls.py",
+      "src/studio/presentation/web/urls.py"
+    ]
+  },
+  "layers": [
+    {
+      "name": "presentation",
+      "paths": [
+        "src/studio/presentation/api/**",
+        "src/studio/presentation/web/**"
+      ],
+      "responsibilities": [
+        "HTTP endpoints",
+        "template rendering",
+        "serializer-based validation"
+      ],
+      "depends_on": ["application", "domain"]
+    },
+    {
+      "name": "application",
+      "paths": [
+        "src/studio/application/services/**",
+        "src/studio/application/workflows/**"
+      ],
+      "responsibilities": [
+        "use-case orchestration",
+        "cross-module coordination",
+        "policy invocation"
+      ],
+      "depends_on": ["domain", "infrastructure"]
+    },
+    {
+      "name": "domain",
+      "paths": [
+        "src/studio/domain/models/**",
+        "src/studio/domain/policies/**"
+      ],
+      "responsibilities": [
+        "persistent data model",
+        "value objects",
+        "business rule validation"
+      ],
+      "depends_on": []
+    },
+    {
+      "name": "infrastructure",
+      "paths": [
+        "src/studio/infrastructure/scraping/**",
+        "src/studio/infrastructure/vectorstores/**",
+        "src/studio/infrastructure/storage/**",
+        "src/studio/infrastructure/llm/**",
+        "src/studio/infrastructure/observability/**",
+        "src/studio/infrastructure/jobs/**"
+      ],
+      "responsibilities": [
+        "external service adapters",
+        "content extraction",
+        "vector store integration",
+        "file export/storage helpers"
+      ],
+      "depends_on": []
+    }
+  ],
+  "bounded_contexts": [
+    {
+      "id": "chat",
+      "primary_paths": [
+        "src/studio/presentation/api/views/chat.py",
+        "src/studio/application/services/chat_service.py",
+        "src/studio/domain/models/conversations.py"
+      ],
+      "pack": "docs/context/packs/chat-and-conversation.md"
+    },
+    {
+      "id": "document_ingestion",
+      "primary_paths": [
+        "src/studio/presentation/api/views/scraping.py",
+        "src/studio/application/services/document_service.py",
+        "src/studio/application/workflows/document_ingestion.py",
+        "src/studio/infrastructure/scraping/**",
+        "src/studio/domain/models/source_documents.py"
+      ],
+      "pack": "docs/context/packs/document-ingestion.md"
+    },
+    {
+      "id": "dataset_generation",
+      "primary_paths": [
+        "src/studio/presentation/api/views/datasets.py",
+        "src/studio/application/services/dataset_service.py",
+        "src/studio/application/workflows/dataset_generation.py",
+        "src/studio/domain/models/dataset_artifacts.py"
+      ],
+      "pack": "docs/context/packs/dataset-generation.md"
+    },
+    {
+      "id": "training",
+      "primary_paths": [
+        "src/studio/presentation/api/views/training.py",
+        "src/studio/application/services/training_service.py",
+        "src/studio/application/workflows/model_training.py",
+        "src/studio/domain/models/training_runs.py"
+      ],
+      "pack": "docs/context/packs/training-and-finetuning.md"
+    },
+    {
+      "id": "evaluation",
+      "primary_paths": [
+        "src/studio/presentation/api/views/evaluation.py",
+        "src/studio/application/services/evaluation_service.py",
+        "src/studio/application/workflows/model_evaluation.py",
+        "src/studio/domain/models/evaluation_runs.py",
+        "src/studio/domain/models/model_stats.py"
+      ],
+      "pack": "docs/context/packs/model-evaluation.md"
+    },
+    {
+      "id": "embedding_storage",
+      "primary_paths": [
+        "src/studio/application/services/vector_store_service.py",
+        "src/studio/application/workflows/embedding_storage.py",
+        "src/studio/infrastructure/vectorstores/qdrant.py"
+      ],
+      "pack": "docs/context/packs/embedding-and-vectorstore.md"
+    }
+  ],
+  "routing_hints": {
+    "prefer_application_layer_for_new_logic": true,
+    "avoid_extending_legacy_monolithic_views": true,
+    "preserve_existing_db_table_names": true,
+    "default_database": "MySQL in non-fallback mode; SQLite fallback in dev/migrate/runserver"
+  }
+}
