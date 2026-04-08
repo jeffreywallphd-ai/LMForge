@@ -1,1 +1,5 @@
-from lmforge.lmforge_core.views.model_statistics import model_statistics_view
+from django.shortcuts import render
+
+
+def model_statistics_view(request):
+    return render(request, "model_statistics.html")

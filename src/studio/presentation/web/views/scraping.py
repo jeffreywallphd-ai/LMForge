@@ -1,1 +1,1 @@
-from lmforge.lmforge_core.views.scrape import scrape_view
+from studio.presentation.api.views.scraping import scrape_view
