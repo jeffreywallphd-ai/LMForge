@@ -1,0 +1,1 @@
+from lmforge.lmforge_core.views.model_training import train_model_view

@@ -1,0 +1,1 @@
+from lmforge.lmforge_core.utils.content_extractor import extract_article_content
