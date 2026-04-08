@@ -1,4 +1,4 @@
-"""Application-level forms for document ingestion and dataset preparation."""
+"""Web forms for document ingestion and dataset preparation."""
 
 from __future__ import annotations
 

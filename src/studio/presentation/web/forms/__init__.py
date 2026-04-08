@@ -1,4 +1,4 @@
-"""Public form exports for Studio."""
+"""Web-form layer for Studio workflows."""
 
 from .documents import DocumentForm, DocumentProcessingForm, SourceDocumentForm
 from .evaluation import EvaluationRunForm

@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.conf import settings
 from studio.models import SourceDocument as ScrapedData, SourceDocumentMetadata as ScrapedDataMeta
-from studio.forms.documents import DocumentForm, DocumentProcessingForm
+from studio.presentation.web.forms.documents import DocumentForm, DocumentProcessingForm
 from django.core.paginator import Paginator
 from django.conf.urls.static import static
 
