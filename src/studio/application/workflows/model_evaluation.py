@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import pandas as pd
 from datasets import Dataset, load_dataset
 
-from studio.application.services.evaluation_service import EvaluationConfig, EvaluationService
+from src.studio.application.services.evaluation_service import EvaluationConfig, EvaluationService
 
 
 @dataclass(slots=True)

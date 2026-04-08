@@ -1,4 +1,4 @@
-"""Base settings extracted from lmforge/lmforge/settings.py."""
+"""Base settings for the standalone src-based Django project."""
 
 import os
 import sys
@@ -40,7 +40,9 @@ ASGI_APPLICATION = 'src.config.asgi.application'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'src', 'studio', 'templates')],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'src', 'studio', 'presentation', 'web', 'templates'),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -61,7 +63,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'src', 'studio', 'static'),
+    os.path.join(BASE_DIR, 'src', 'studio', 'presentation', 'web', 'static'),
 ]
 
 MEDIA_URL = '/media/'

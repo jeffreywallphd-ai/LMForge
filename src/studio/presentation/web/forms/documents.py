@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from django import forms
+from django.db.models import TextChoices
 
-from studio.domain.models.source_documents import SourceDocument
+from src.studio.domain.models.source_documents import SourceDocument
 
 
 class SourceDocumentForm(forms.ModelForm):
@@ -48,7 +49,7 @@ class SourceDocumentForm(forms.ModelForm):
 class DocumentProcessingForm(forms.Form):
     """Configure synthetic dataset generation from processed document text."""
 
-    class TestType(forms.TextChoices):
+    class TestType(TextChoices):
         REAL = "real", "Real Test"
         MOCKUP = "mockup", "Mock-up Test"
 

@@ -17,11 +17,11 @@ from bs4 import BeautifulSoup
 from django.shortcuts import render
 from openpyxl import load_workbook
 from io import BytesIO
-from studio.models import SourceDocument as ScrapedData  # Import the model to save data
+from src.studio.models import SourceDocument as ScrapedData  # Import the model to save data
 import pdfplumber
 import markdown
 
-from studio.infrastructure.scraping.content_extractor import extract_article_content
+from src.studio.infrastructure.scraping.content_extractor import extract_article_content
 logger = logging.getLogger(__name__)
 MAX_TITLE_LENGTH = 100  # Maximum length for ScrapedData title field
 MAX_URL_TITLE_LENGTH = 95  # Maximum length when using URL as title (leave room for "scraped")
