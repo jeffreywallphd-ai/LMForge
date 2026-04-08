@@ -2,26 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from studio.domain.models.training_runs import TrainingRun
+from studio.domain.policies.training_rules import validate_training_run
 
 
-@dataclass(slots=True)
-class TrainingConfig:
-    model_name: str
-    learning_rate: float = 2e-5
-    num_epochs: int = 3
-    batch_size: int = 1
-    project_name: str = "lmforge"
-    gradient_checkpointing: bool = False
-    max_grad_norm: float = 1.0
-    use_lora: bool = False
-    use_qlora: bool = False
-    fp16: bool = False
-    bf16: bool = False
-    weight_decay: float = 0.01
-    model_repo: str = "OpenFinAL/your-model-name"
-    dataset_name: str = "FinGPT/fingpt-fiqa_qa"
-    train_test_split_ratio: float = 0.1
+TrainingConfig = TrainingRun
 
 
 class TrainingService:
@@ -67,12 +52,7 @@ class TrainingService:
         return ["q_proj", "v_proj"]
 
     def validate_training_config(self, config: TrainingConfig, model_size: int) -> None:
-        if config.use_qlora and model_size < 1_300_000_000:
-            raise ValueError("QLoRA can only be applied to models with 1.3B parameters or more")
-        if not (0 < config.train_test_split_ratio < 1):
-            raise ValueError("train_test_split_ratio must be in range (0, 1)")
-        if config.batch_size <= 0:
-            raise ValueError("batch_size must be greater than 0")
+        validate_training_run(config, model_size=model_size)
 
     def resolve_precision(self, config: TrainingConfig):
         import torch
