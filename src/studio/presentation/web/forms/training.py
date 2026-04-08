@@ -1,4 +1,4 @@
-"""Application-level forms for training workflows."""
+"""Web forms for training workflows."""
 
 from __future__ import annotations
 
