@@ -2,30 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from studio.domain.models.evaluation_runs import EvaluationRun
+from studio.domain.policies.evaluation_rules import validate_evaluation_run
 
 
-@dataclass(slots=True)
-class EvaluationConfig:
-    model_name: str
-    max_length: int = 200
-    min_length: int = 100
-    top_k: int = 50
-    top_p: float = 0.95
-    max_new_tokens: int = 300
-    no_repeat_ngrams: int = 0
+EvaluationConfig = EvaluationRun
 
 
 class EvaluationService:
     """Evaluation logic migrated from `lmforge_core.views.model_statistics`."""
 
     def validate_constraints(self, config: EvaluationConfig) -> None:
-        if not (1 <= config.min_length <= config.max_length <= 1024):
-            raise ValueError("min_length must be <= max_length and within valid range")
-        if not (0 <= config.top_p <= 1):
-            raise ValueError("top_p must be between 0 and 1")
-        if config.top_k < 0:
-            raise ValueError("top_k must be a non-negative integer")
+        validate_evaluation_run(config)
 
     def cal_sts_score(self, input1: str, input2: str):
         from sentence_transformers import CrossEncoder

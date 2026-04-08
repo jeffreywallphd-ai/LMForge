@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from studio.application.services.document_service import DocumentService
 from studio.domain.models.source_documents import SourceDocument
+from studio.domain.policies.dataset_rules import validate_dataset_request
 
 
 @dataclass(slots=True)
@@ -66,6 +67,11 @@ class DatasetService:
         return tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
 
     def generate_qa_pairs(self, request: DatasetGenerationRequest, *, model_name: str = "gpt2") -> list[dict]:
+        validate_dataset_request(
+            document_ids=request.document_ids,
+            questions_per_chunk=request.questions_per_chunk,
+            chunk_limit=request.chunk_limit,
+        )
         text = self.get_documents_text(request.document_ids)
         chunks = self.document_service.split_text(text=text, max_tokens=256)
         results: list[dict] = []
