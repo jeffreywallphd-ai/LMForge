@@ -81,3 +81,4 @@ Deliverables:
 - `packs/training-and-finetuning.md`
 - `packs/model-evaluation.md`
 - `domain-model-stabilization.md` (domain model import, naming, and migration guardrails)
+- `workflow-conventions.md` (orchestration placement, contracts, and failure semantics)

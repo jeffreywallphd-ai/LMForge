@@ -15,16 +15,25 @@
 - `src/studio/domain/policies/dataset_rules.py`
 - `src/studio/domain/models/dataset_artifacts.py`
 - `src/studio/domain/models/source_documents.py`
+- `docs/context/workflow-conventions.md`
 
 ## Core Facts
 
 - Dataset generation pulls selected `SourceDocument` content, chunks text, prompts a language model, and parses JSON arrays of Q/A records.
 - Validation of business limits is centralized in `validate_dataset_request` and applied through `DatasetService` request normalization.
-- `DatasetService` returns a structured result contract (`ok`, normalized records, failure metadata, optional persistence handoff metadata).
-- Workflow layer adapts service output into JSON/CSV renderings for presentation use.
+- `DatasetService` owns low-level generation mechanics (prompt assembly, model call, parse/normalize, request policy validation).
+- `DatasetGenerationWorkflow` owns orchestration and caller contracts: `run(request)` returns normalized `ok/failure` result semantics and export renderings.
+- `DatasetGenerationWorkflow.generate(...)` remains as a compatibility wrapper and delegates to `run(...)`.
 - Legacy view still bundles tokenization, Qdrant interactions, and rendering in one module.
 
 ## Important Constraints
 
 - Treat model outputs as untrusted; keep JSON extraction/parse guarded.
 - Preserve predictable exports for downstream tooling.
+
+## Dataset Workflow Lifecycle
+
+1. Presentation parses request payload or form fields.
+2. `DatasetGenerationWorkflow.run(...)` builds a `DatasetGenerationRequest` for service execution.
+3. `DatasetService.generate_dataset(...)` runs generation/validation and returns normalized service result data.
+4. Workflow renders JSON/CSV through `ExportService` and returns a single workflow outcome object (`ok`, records, failure metadata, persistence metadata).

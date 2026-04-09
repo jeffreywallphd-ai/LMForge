@@ -39,6 +39,32 @@ def test_generate_raises_when_service_returns_failure():
         workflow.generate(document_ids=[])
 
 
+
+
+def test_run_returns_normalized_failure_result():
+    dataset = _DatasetSvc(
+        DatasetGenerationResult(
+            ok=False,
+            failure=DatasetGenerationFailure(code="validation_error", message="At least one source document is required"),
+        )
+    )
+    workflow = DatasetGenerationWorkflow(dataset_service=dataset, export_service=_ExportSvc())
+
+    result = workflow.run(
+        request=types.SimpleNamespace(
+            document_ids=[],
+            questions_per_chunk=1,
+            chunk_limit=0,
+            instruction_prompt="",
+            model_name="gpt2",
+        )
+    )
+
+    assert result.ok is False
+    assert result.failure is not None
+    assert result.failure.code == "validation_error"
+    assert result.json_text == "[]"
+
 def test_generate_uses_service_contract_and_exports():
     service_result = DatasetGenerationResult(
         ok=True,

@@ -153,3 +153,46 @@ def test_model_training_workflow_prepare_training_outcome_handles_validation_err
     assert outcome.ok is False
     assert outcome.failure_kind == "validation_error"
     assert "train_test_split_ratio" in outcome.error_message
+
+
+def test_model_training_workflow_execute_training_success(monkeypatch):
+    workflow = ModelTrainingWorkflow()
+
+    monkeypatch.setattr(workflow.training_service, "get_model_size", lambda *_a, **_k: 2_000_000_000)
+    monkeypatch.setattr(workflow.training_service, "validate_training_config", lambda *_a, **_k: None)
+
+    class _Executor:
+        def execute(self, *, config, precision, target_modules):
+            return types.SimpleNamespace(ok=True, status="accepted", detail="queued", metadata={"p": precision, "m": target_modules, "n": config.model_name})
+
+    class _Store:
+        def save(self, **kwargs):
+            return {"status": kwargs["execution"].status, "failure_kind": kwargs["failure_kind"]}
+
+    result = workflow.execute_training(
+        {"model_name": "meta-llama/Llama-3-8B", "train_test_split_ratio": "0.1", "use_qlora": "on"},
+        executor=_Executor(),
+        result_store=_Store(),
+    )
+
+    assert result.ok is True
+    assert result.execution.status == "accepted"
+    assert result.persisted_record == {"status": "accepted", "failure_kind": None}
+    assert result.resolved_precision == "4bit-qlora"
+
+
+def test_model_training_workflow_execute_training_validation_failure():
+    workflow = ModelTrainingWorkflow()
+
+    class _Executor:
+        def execute(self, **_kwargs):  # pragma: no cover - should never execute
+            raise AssertionError("executor should not run")
+
+    result = workflow.execute_training(
+        {"model_name": "gpt2", "train_test_split_ratio": "4"},
+        executor=_Executor(),
+    )
+
+    assert result.ok is False
+    assert result.failure_kind == "validation_error"
+    assert result.execution.status == "invalid_config"

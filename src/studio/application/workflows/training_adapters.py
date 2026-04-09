@@ -1,7 +1,7 @@
 """Default training execution/persistence collaborators.
 
 These adapters provide lightweight seams for local execution and storage in
-presentation handlers while keeping orchestration in ``TrainingService``.
+presentation handlers while keeping orchestration in ``ModelTrainingWorkflow``.
 """
 
 from __future__ import annotations

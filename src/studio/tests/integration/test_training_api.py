@@ -10,15 +10,18 @@ from studio.presentation.api.views import training as api_training_views
 from studio.presentation.web.views import training as web_training_views
 
 
-class _FakeTrainingService:
+class _FakeWorkflow:
     def __init__(self, result) -> None:
         self.result = result
         self.received_payload = None
 
-    def orchestrate_training(self, payload, *, executor, result_store):
+    def execute_training(self, payload, *, executor, result_store):
         self.received_payload = payload
         assert executor is not None
         assert result_store is not None
+        return self.result
+
+    def prepare_training_outcome(self, _payload):
         return self.result
 
 
@@ -39,8 +42,8 @@ def _json(response):
 
 
 def test_train_model_api_maps_success_service_outcome(monkeypatch) -> None:
-    fake_service = _FakeTrainingService(_orchestration_result(ok=True, detail="queued"))
-    monkeypatch.setattr(api_training_views, "get_training_service", lambda: fake_service)
+    fake_workflow = _FakeWorkflow(_orchestration_result(ok=True, detail="queued"))
+    monkeypatch.setattr(api_training_views, "get_training_workflow", lambda: fake_workflow)
 
     request = RequestFactory().post("/api/train_model/", data={"model_name": "gpt2", "train_test_split_ratio": "0.1"})
     response = api_training_views.train_model_view(request)
@@ -50,18 +53,18 @@ def test_train_model_api_maps_success_service_outcome(monkeypatch) -> None:
     assert body["status"] == "success"
     assert body["message"] == "queued"
     assert body["training"]["resolved_precision"] == "4bit-qlora"
-    assert fake_service.received_payload["model_name"] == "gpt2"
+    assert fake_workflow.received_payload["model_name"] == "gpt2"
 
 
 def test_train_model_api_maps_validation_failure_to_bad_request(monkeypatch) -> None:
-    fake_service = _FakeTrainingService(
+    fake_workflow = _FakeWorkflow(
         _orchestration_result(
             ok=False,
             detail="train_test_split_ratio must be in range (0, 1)",
             failure_kind="validation_error",
         )
     )
-    monkeypatch.setattr(api_training_views, "get_training_service", lambda: fake_service)
+    monkeypatch.setattr(api_training_views, "get_training_workflow", lambda: fake_workflow)
 
     request = RequestFactory().post("/api/train_model/", data={"train_test_split_ratio": "5"})
     response = api_training_views.train_model_view(request)
@@ -73,11 +76,11 @@ def test_train_model_api_maps_validation_failure_to_bad_request(monkeypatch) -> 
 
 
 def test_train_model_workflow_maps_normalized_workflow_error(monkeypatch) -> None:
-    class _FakeWorkflow:
+    class _PlanWorkflow:
         def prepare_training_outcome(self, _payload):
             return SimpleNamespace(ok=False, failure_kind="validation_error", error_message="invalid training payload")
 
-    monkeypatch.setattr(api_training_views, "ModelTrainingWorkflow", _FakeWorkflow)
+    monkeypatch.setattr(api_training_views, "get_training_workflow", lambda: _PlanWorkflow())
 
     request = RequestFactory().post("/api/train_model_workflow/", data={"model_name": "gpt2"})
     response = api_training_views.train_model_workflow(request)
@@ -89,8 +92,13 @@ def test_train_model_workflow_maps_normalized_workflow_error(monkeypatch) -> Non
 
 
 def test_training_web_view_acts_as_service_adapter(monkeypatch) -> None:
-    fake_service = _FakeTrainingService(_orchestration_result(ok=True, detail="Training accepted"))
-    monkeypatch.setattr(web_training_views, "TrainingService", lambda: fake_service)
+    fake_workflow = _FakeWorkflow(_orchestration_result(ok=True, detail="Training accepted"))
+
+    class _WorkflowFactory:
+        def __call__(self):
+            return fake_workflow
+
+    monkeypatch.setattr(web_training_views, "ModelTrainingWorkflow", _WorkflowFactory())
 
     request = RequestFactory().post("/training/", data={"model_name": "gpt2", "train_test_split_ratio": "0.1"})
     response = web_training_views.train_model_view(request)
@@ -98,4 +106,4 @@ def test_training_web_view_acts_as_service_adapter(monkeypatch) -> None:
     assert response.status_code == 200
     body = response.content.decode()
     assert "Training accepted" in body
-    assert fake_service.received_payload["model_name"] == "gpt2"
+    assert fake_workflow.received_payload["model_name"] == "gpt2"
