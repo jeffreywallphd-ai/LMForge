@@ -177,3 +177,30 @@ After extraction in each slice:
 
 - Verify endpoint tests remain green without payload shape regressions.
 - Add one integration test that executes the service/workflow path with lightweight doubles.
+
+
+## Story 3.3 Dataset Service Boundary (Generation + Form Separation + Persistence Handoff)
+
+The dataset vertical slice now follows an explicit service contract:
+
+- `DatasetGenerationRequest`: framework-agnostic input payload (`document_ids`, `questions_per_chunk`, `chunk_limit`, `instruction_prompt`).
+- `DatasetService.generate_dataset(...)`: normalizes request values, validates business rules, orchestrates chunk generation + model parsing, and returns a structured outcome.
+- `DatasetGenerationResult`: stable success/failure envelope for both web and API adapters, including:
+  - `ok`
+  - `records`
+  - `normalized_request`
+  - `chunk_count` and `processed_chunk_count`
+  - `failure` with normalized code/message when validation fails
+  - `persisted_artifact` metadata when callers provide persistence handoff callbacks.
+
+Form and view responsibilities remain presentation-only:
+
+- Forms (`presentation/web/forms/*`) own field-level shape and request-bound validation (for example trimming `instruction_prompt`).
+- Views/workflows map cleaned form values to `DatasetGenerationRequest` and consume service outcomes.
+- Business orchestration (chunk selection, model output parsing, record normalization) lives in `DatasetService`, not forms.
+
+Persistence handoff is explicit:
+
+- `DatasetService.generate_dataset(..., persist_artifact=...)` accepts an optional callback.
+- Callers decide whether persistence occurs and how artifacts are saved.
+- The callback return metadata is surfaced as `persisted_artifact` in the service and workflow result contracts.

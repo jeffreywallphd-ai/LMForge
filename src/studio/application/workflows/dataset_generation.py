@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, Callable
 
 from studio.application.services.dataset_service import DatasetGenerationRequest, DatasetService
 from studio.application.services.export_service import ExportService
@@ -16,6 +17,9 @@ class DatasetGenerationWorkflowResult:
     csv_text: str
     document_count: int
     chunk_limit: int
+    chunk_count: int
+    processed_chunk_count: int
+    persisted_artifact: dict[str, Any] | None
 
 
 class DatasetGenerationWorkflow:
@@ -54,25 +58,34 @@ class DatasetGenerationWorkflow:
         chunk_limit: int = 1,
         instruction_prompt: str = "",
         model_name: str = "gpt2",
+        persist_artifact: Callable[[list[dict[str, str]], DatasetGenerationRequest], dict[str, Any] | None] | None = None,
     ) -> DatasetGenerationWorkflowResult:
-        if not document_ids:
-            raise ValueError("At least one document must be selected")
-
         request = DatasetGenerationRequest(
             document_ids=document_ids,
-            questions_per_chunk=max(1, int(questions_per_chunk)),
-            chunk_limit=max(1, int(chunk_limit)),
+            questions_per_chunk=questions_per_chunk,
+            chunk_limit=chunk_limit,
             instruction_prompt=instruction_prompt,
         )
+        service_result = self.dataset_service.generate_dataset(
+            request,
+            model_name=model_name,
+            persist_artifact=persist_artifact,
+        )
 
-        records = self.dataset_service.generate_qa_pairs(request, model_name=model_name)
-        json_text = self.export_service.as_json_text(records)
-        csv_text = self.export_service.as_csv_text(records)
+        if not service_result.ok:
+            message = service_result.failure.message if service_result.failure else "Dataset generation failed"
+            raise ValueError(message)
+
+        json_text = self.export_service.as_json_text(service_result.records)
+        csv_text = self.export_service.as_csv_text(service_result.records)
 
         return DatasetGenerationWorkflowResult(
-            records=records,
+            records=service_result.records,
             json_text=json_text,
             csv_text=csv_text,
-            document_count=len(document_ids),
-            chunk_limit=request.chunk_limit,
+            document_count=len(service_result.normalized_request.document_ids),
+            chunk_limit=service_result.normalized_request.chunk_limit,
+            chunk_count=service_result.chunk_count,
+            processed_chunk_count=service_result.processed_chunk_count,
+            persisted_artifact=service_result.persisted_artifact,
         )
