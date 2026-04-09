@@ -84,3 +84,11 @@ Adapters for external systems and utilities.
 3. Consolidate duplicate utility logic currently repeated across views/services.
 4. Add job-queue-backed execution for long-running training/evaluation tasks.
 5. Expand unit/integration coverage around workflows and domain policies.
+
+## 7) Presentation Boundary Guidance
+
+A detailed inventory of current API/web presentation boundary violations and migration rules is maintained in:
+
+- `docs/architecture/presentation-boundary-audit.md`
+
+Use that document as the source of truth for Story 2.1.1/2.1.2/2.1.3 follow-on refactors.

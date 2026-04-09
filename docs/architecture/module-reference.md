@@ -86,3 +86,10 @@
 - `src/studio/tests/integration/*`
 
 Tests are present for selected services/infrastructure and endpoint-level workflows, with room to increase coverage around new application workflows.
+
+## Presentation Boundary Contracts
+
+- Web-only handlers belong in `src/studio/presentation/web/views/*` and can render templates/forms.
+- API-only handlers belong in `src/studio/presentation/api/views/*` and should return JSON/DRF responses only.
+- Root routing split is enforced by `src/config/urls_web.py` and `src/config/urls_api.py`.
+- Known exceptions and migration targets are tracked in `docs/architecture/presentation-boundary-audit.md`.
