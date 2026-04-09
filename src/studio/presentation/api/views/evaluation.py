@@ -5,7 +5,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from evaluate import load
 from datasets import load_dataset, Dataset
 import torch
-from django.shortcuts import render
 import traceback
 import pandas as pd
 import requests
@@ -98,9 +97,6 @@ def model_stats(prompt, model_name, max_length=200, min_length=100, top_k=50, to
 
 
 class ModelStatisticsView(APIView):
-
-    def get(self, request):
-        return render(request, 'model_statistics.html')
 
     """
     API endpoint to generate a chatbot response and compute metrics.
