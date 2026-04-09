@@ -3,9 +3,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import pytest
-
-
 SRC_ROOT = Path(__file__).resolve().parents[3]
 API_VIEWS_DIR = SRC_ROOT / 'studio' / 'presentation' / 'api' / 'views'
 WEB_VIEWS_DIR = SRC_ROOT / 'studio' / 'presentation' / 'web' / 'views'
@@ -53,10 +50,6 @@ def test_split_url_modules_mount_expected_prefixes() -> None:
     assert any(str(pattern.pattern) == '' for pattern in urls_web.urlpatterns)
 
 
-@pytest.mark.xfail(
-    reason='Story 2.1 audit identified API modules still rendering templates; refactor tracked in boundary audit doc.',
-    strict=False,
-)
 def test_api_views_do_not_import_template_rendering() -> None:
     violating_modules: list[str] = []
 
@@ -68,10 +61,6 @@ def test_api_views_do_not_import_template_rendering() -> None:
     assert violating_modules == []
 
 
-@pytest.mark.xfail(
-    reason='Story 2.1 audit identified web views importing API handlers directly; migrate shared behavior to application layer.',
-    strict=False,
-)
 def test_web_views_do_not_import_api_view_modules() -> None:
     violating_modules: list[str] = []
 

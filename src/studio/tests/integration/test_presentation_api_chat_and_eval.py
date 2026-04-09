@@ -16,7 +16,8 @@ def test_session_create_view_generates_uuid(monkeypatch) -> None:
     response = chat_views.SessionCreateView.as_view()(request)
 
     assert response.status_code == 201
-    assert response.data["session_id"] == "fixed-session"
+    assert response.data["status"] == "success"
+    assert response.data["data"]["session_id"] == "fixed-session"
 
 
 def test_session_and_conversation_list_views_use_conversation_manager(monkeypatch) -> None:
@@ -33,11 +34,11 @@ def test_session_and_conversation_list_views_use_conversation_manager(monkeypatc
 
     sessions_response = chat_views.SessionListView.as_view()(factory.get("/api/chatbot/sessions/"))
     assert sessions_response.status_code == 200
-    assert sessions_response.data == {"sessions": ["s1", "s2"]}
+    assert sessions_response.data == {"status": "success", "data": {"sessions": ["s1", "s2"]}}
 
     history_response = chat_views.ConversationListView.as_view()(factory.get("/api/chatbot/s1/"), session_id="s1")
     assert history_response.status_code == 200
-    assert history_response.data == [{"message": "Hi", "is_user": True}]
+    assert history_response.data == {"status": "success", "data": [{"message": "Hi", "is_user": True}]}
 
 
 def test_conversation_create_view_returns_201_when_serializer_valid(monkeypatch) -> None:
@@ -52,7 +53,8 @@ def test_conversation_create_view_returns_201_when_serializer_valid(monkeypatch)
     response = chat_views.ConversationCreateView.as_view()(request, session_id="s1")
 
     assert response.status_code == 201
-    assert response.data["session_id"] == "s1"
+    assert response.data["status"] == "success"
+    assert response.data["data"]["session_id"] == "s1"
     serializer.save.assert_called_once()
 
 
@@ -66,7 +68,7 @@ def test_chatbot_generate_response_rejects_invalid_generation_bounds() -> None:
     response = chat_views.ChatbotGenerateResponseView.as_view()(request, session_id="s1")
 
     assert response.status_code == 400
-    assert "min_length must be <= max_length" in response.data["error"]
+    assert "min_length must be <= max_length" in response.data["error"]["message"]
 
 
 def test_chatbot_generate_response_saves_user_and_bot_messages(monkeypatch) -> None:
@@ -95,7 +97,8 @@ def test_chatbot_generate_response_saves_user_and_bot_messages(monkeypatch) -> N
     response = chat_views.ChatbotGenerateResponseView.as_view()(request, session_id="s1")
 
     assert response.status_code == 200
-    assert response.data["bot_response"] == "Stubbed reply"
+    assert response.data["status"] == "success"
+    assert response.data["data"]["bot_response"] == "Stubbed reply"
     assert len(saved) == 2
     assert saved[0]["is_user"] is True
     assert saved[1]["is_user"] is False

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -45,11 +44,10 @@ def test_home_view_adds_configuration_message_when_hf_account_missing(request_fa
     assert any("Qdrant not installed" in msg for msg in captured["messages"])
 
 
-def test_home_view_post_delete_collection_returns_success(request_factory, monkeypatch) -> None:
+def test_home_view_post_delete_collection_adds_success_message(request_factory, monkeypatch) -> None:
     request = request_factory.post(
         "/home/",
-        data=json.dumps({"collection_name": "demo"}),
-        content_type="application/json",
+        data={"collection_name": "demo"},
     )
 
     class FakeClient:
@@ -60,13 +58,19 @@ def test_home_view_post_delete_collection_returns_success(request_factory, monke
         def delete_collection(self, collection_name: str) -> None:
             assert collection_name == "demo"
 
+    monkeypatch.setattr(home_views, "DEFAULT_HF_ACCOUNT", None)
     monkeypatch.setattr(home_views, "QDRANT_AVAILABLE", True)
     monkeypatch.setattr(home_views, "QdrantClient", FakeClient)
+    monkeypatch.setattr(
+        home_views,
+        "render",
+        lambda _request, _template, context: HttpResponse("|".join(context["messages"])),
+    )
 
     response = home_views.home_view(request)
 
     assert response.status_code == 200
-    assert json.loads(response.content) == {"success": True}
+    assert "Collection 'demo' deleted." in response.content.decode()
 
 
 def test_dataset_workflow_view_reads_and_clears_redirect_message(request_factory, monkeypatch) -> None:

@@ -242,5 +242,3 @@ class ModelStatisticsView(APIView):
         dataset = Dataset.from_pandas(df)
         return dataset
 
-def chatbot_view(request):
-    return render(request, 'model_statistics.html')

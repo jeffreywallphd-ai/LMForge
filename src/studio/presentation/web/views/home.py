@@ -1,5 +1,3 @@
-import json
-from django.http import JsonResponse
 from django.shortcuts import render
 from django.conf import settings
 import logging
@@ -51,17 +49,17 @@ def home_view(request):
 # ---------- Handle Collection Deletion ----------
     if request.method == "POST":
         if not QDRANT_AVAILABLE:
-            return JsonResponse({"error": "Qdrant client not installed."}, status=400)
-        try:
-            data = json.loads(request.body.decode())
-            collection_name = data.get("collection_name")
-            if collection_name:
-                client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-                client.delete_collection(collection_name)
-                return JsonResponse({"success": True})
-        except Exception as e:
-            logging.error(f"Failed to delete collection: {e}")
-            return JsonResponse({"error": str(e)}, status=500)
+            messages.append("Qdrant client not installed.")
+        else:
+            try:
+                collection_name = request.POST.get("collection_name")
+                if collection_name:
+                    client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+                    client.delete_collection(collection_name)
+                    messages.append(f"Collection '{collection_name}' deleted.")
+            except Exception as e:
+                logging.error(f"Failed to delete collection: {e}")
+                messages.append(f"Failed to delete collection: {e}")
     
 # ----- Qdrant collections -----
     if QDRANT_AVAILABLE:

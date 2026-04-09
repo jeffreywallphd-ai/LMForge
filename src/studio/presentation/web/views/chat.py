@@ -1,1 +1,5 @@
-from studio.presentation.api.views.chat import chatbot_view
+from django.shortcuts import render
+
+
+def chatbot_view(request):
+    return render(request, "chatbot.html")

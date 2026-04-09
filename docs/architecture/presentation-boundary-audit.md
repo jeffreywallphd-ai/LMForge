@@ -110,3 +110,13 @@ Follow-up refactor work should focus on moving misclassified handlers without co
 - Keep runtime behavior unchanged in this audit step.
 - Add/maintain route contract tests that verify web and API URL mounting.
 - Add boundary-audit placeholder tests that mark known violations as expected failures until migration is complete.
+
+
+## Story 2.1.4/2.1.5 Update
+
+Recent refactor changes align active handlers to clearer presentation contracts:
+
+- API views were updated to remove template rendering calls and return JSON payloads.
+- Web views no longer import API view handlers directly.
+- Web handlers were reduced to browser-oriented template rendering flows.
+- Standard API response envelope guidance now lives in `docs/architecture/api-response-contracts.md`.

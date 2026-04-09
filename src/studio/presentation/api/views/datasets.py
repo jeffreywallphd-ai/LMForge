@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from studio.models import SourceDocument as ScrapedData
 from django.http import JsonResponse
 from sentence_transformers import SentenceTransformer
@@ -249,10 +248,14 @@ def database_workflow(request):
         setup_missing.append("Qdrant is not running or unreachable.")
 
     if setup_missing:
-        return render(request, "database_chunks.html", {
-            "warning": "⚠ Setup incomplete. " + " ".join(setup_missing),
-            "existing_collections": existing_collections
-        })
+        return JsonResponse({
+            "status": "error",
+            "error": {
+                "code": "setup_incomplete",
+                "message": "⚠ Setup incomplete. " + " ".join(setup_missing),
+            },
+            "data": {"existing_collections": existing_collections},
+        }, status=503)
 
     # Handle AJAX chunk fetch
     if request.method == "GET" and request.GET.get("collection_name"):
@@ -265,10 +268,14 @@ def database_workflow(request):
         selected_document_ids = request.POST.getlist('selected_documents')
 
         if not selected_document_ids:
-            return render(request, "database_chunks.html", {
-                "error": "You must select at least one document to proceed.",
-                "existing_collections": existing_collections,
-            })
+            return JsonResponse({
+                "status": "error",
+                "error": {
+                    "code": "validation_error",
+                    "message": "You must select at least one document to proceed.",
+                },
+                "data": {"existing_collections": existing_collections},
+            }, status=400)
 
         documents = ScrapedData.objects.filter(id__in=selected_document_ids)
         combined_text = "\n\n".join([doc.content for doc in documents])
@@ -280,30 +287,42 @@ def database_workflow(request):
         collection_name = new_collection if new_collection else selected_collection
 
         if not collection_name:
-            return render(request, "database_chunks.html", {
-                "documents": documents,
-                "total_chunks": total_chunks,
-                "existing_collections": get_existing_collections(),
-                "error": "Please select or enter a collection name.",
-                "selected_document_ids": selected_document_ids
-            })
+            return JsonResponse({
+                "status": "error",
+                "error": {
+                    "code": "validation_error",
+                    "message": "Please select or enter a collection name.",
+                },
+                "data": {
+                    "total_chunks": total_chunks,
+                    "existing_collections": get_existing_collections(),
+                    "selected_document_ids": selected_document_ids,
+                },
+            }, status=400)
 
         success = store_chunks_in_qdrant(text_chunks, collection_name)
 
         if not success:
-            return render(request, "database_chunks.html", {
-                "error": f"⚠ Failed to store chunks in '{collection_name}'. Ensure Qdrant is running.",
-                "existing_collections": existing_collections,
-            })
+            return JsonResponse({
+                "status": "error",
+                "error": {
+                    "code": "storage_failure",
+                    "message": f"⚠ Failed to store chunks in '{collection_name}'. Ensure Qdrant is running.",
+                },
+                "data": {"existing_collections": existing_collections},
+            }, status=500)
 
-        return render(request, "database_chunks.html", {
-            "documents": documents,
-            "total_chunks": total_chunks,
-            "existing_collections": get_existing_collections(),
-            "selected_document_ids": selected_document_ids,
-            "success": f"Stored {total_chunks} chunks in Qdrant collection '{collection_name}'."
+        return JsonResponse({
+            "status": "success",
+            "data": {
+                "total_chunks": total_chunks,
+                "existing_collections": get_existing_collections(),
+                "selected_document_ids": selected_document_ids,
+                "message": f"Stored {total_chunks} chunks in Qdrant collection '{collection_name}'.",
+            },
         })
 
-    return render(request, "database_chunks.html", {
-        "existing_collections": get_existing_collections()
+    return JsonResponse({
+        "status": "success",
+        "data": {"existing_collections": get_existing_collections()},
     })

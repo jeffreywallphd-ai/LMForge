@@ -90,5 +90,6 @@ Adapters for external systems and utilities.
 A detailed inventory of current API/web presentation boundary violations and migration rules is maintained in:
 
 - `docs/architecture/presentation-boundary-audit.md`
+- `docs/architecture/api-response-contracts.md`
 
-Use that document as the source of truth for Story 2.1.1/2.1.2/2.1.3 follow-on refactors.
+Use these documents as the source of truth for Story 2.1 boundary refactors and response contract consistency.
