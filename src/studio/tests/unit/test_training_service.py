@@ -2,7 +2,7 @@ from studio.application.services.training_service import (
     TrainingExecutionResult,
     TrainingService,
 )
-from studio.domain.models.training_runs import TrainingRun
+from studio.domain.models import TrainingRun
 
 
 def test_assemble_config_normalizes_input_payload():

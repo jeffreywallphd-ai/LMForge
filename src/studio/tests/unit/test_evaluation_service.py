@@ -1,7 +1,7 @@
 import pytest
 
 from studio.application.services.evaluation_service import EvaluationService
-from studio.domain.models.evaluation_runs import EvaluationRun
+from studio.domain.models import EvaluationRun
 
 
 def test_validate_constraints_delegates(monkeypatch):

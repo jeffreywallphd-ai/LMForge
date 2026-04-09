@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any
 import uuid
 
-from studio.domain.models.conversations import Conversation
+from studio.domain.models import Conversation
 
 
 @dataclass(slots=True)

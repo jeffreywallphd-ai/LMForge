@@ -10,7 +10,7 @@ from rest_framework.request import Request
 from rest_framework.views import APIView
 
 from studio.application.services.scraping_service import ScrapeRequest, ScrapingService
-from studio.models import SourceDocument as ScrapedData
+from studio.domain.models import SourceDocument
 from studio.presentation.api.response_contracts import error_response, success_response, validation_error_response
 
 logger = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ class UploadPDFView(APIView):
                 content = text
                 file_type = "text"
 
-            scraped_record: ScrapedData = ScrapedData.objects.create(
+            scraped_record: SourceDocument = SourceDocument.objects.create(
                 url="https://local/uploaded_pdf",
                 file_type=file_type,
                 content=content,
@@ -118,7 +118,7 @@ class UploadPDFView(APIView):
 
 
 class SaveManualTextView(APIView):
-    """Save manually entered text to ScrapedData."""
+    """Save manually entered text to SourceDocument."""
 
     def post(self, request: Request):
         text: str | None = request.data.get("text") or request.POST.get("text")
@@ -128,7 +128,7 @@ class SaveManualTextView(APIView):
             return validation_error_response("No text provided")
 
         try:
-            scraped_record: ScrapedData = ScrapedData.objects.create(
+            scraped_record: SourceDocument = SourceDocument.objects.create(
                 url="https://local/manual",
                 file_type="text",
                 content=text,

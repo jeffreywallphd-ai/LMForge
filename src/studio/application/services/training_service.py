@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from studio.domain.models.training_runs import TrainingRun
+from studio.domain.models import TrainingRun
 from studio.domain.policies.training_rules import validate_training_run
 
 

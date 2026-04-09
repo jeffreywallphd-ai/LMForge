@@ -3,12 +3,12 @@ from __future__ import annotations
 from django.shortcuts import render
 
 from studio.application.services.scraping_service import ScrapeRequest, ScrapingService
-from studio.models import SourceDocument as ScrapedData
+from studio.domain.models import SourceDocument
 
 
 def scrape_view(request):
     scraping_service = ScrapingService()
-    latest = ScrapedData.objects.order_by("-created_at").first()
+    latest = SourceDocument.objects.order_by("-created_at").first()
 
     context: dict[str, object] = {
         "latest_scraped_data": latest,

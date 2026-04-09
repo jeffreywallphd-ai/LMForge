@@ -1,4 +1,4 @@
-from studio.models import SourceDocument as ScrapedData
+from studio.domain.models import SourceDocument
 from django.http import JsonResponse
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -277,7 +277,7 @@ def database_workflow(request):
                 "data": {"existing_collections": existing_collections},
             }, status=400)
 
-        documents = ScrapedData.objects.filter(id__in=selected_document_ids)
+        documents = SourceDocument.objects.filter(id__in=selected_document_ids)
         combined_text = "\n\n".join([doc.content for doc in documents])
         text_chunks = split_text(combined_text, max_tokens=1000)
         total_chunks = len(text_chunks)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from studio.domain.models.training_runs import TrainingRun
+from studio.domain.models import TrainingRun
 
 
 def validate_training_run(config: TrainingRun, *, model_size: int) -> None:

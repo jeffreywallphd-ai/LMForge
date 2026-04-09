@@ -77,7 +77,7 @@ def test_dataset_workflow_view_reads_and_clears_redirect_message(request_factory
 
     meta_manager = Mock()
     meta_manager.all.return_value = fake_qs
-    monkeypatch.setattr(datasets_views.ScrapedDataMeta, "objects", meta_manager)
+    monkeypatch.setattr(datasets_views.SourceDocumentMetadata, "objects", meta_manager)
 
     captured = {}
 
@@ -144,7 +144,7 @@ def test_scrape_view_get_renders_latest_record(request_factory, monkeypatch) -> 
 
     fake_qs = Mock()
     fake_qs.first.return_value = SimpleNamespace(title="Latest")
-    monkeypatch.setattr(scraping_views.ScrapedData.objects, "order_by", lambda *_a, **_k: fake_qs)
+    monkeypatch.setattr(scraping_views.SourceDocument.objects, "order_by", lambda *_a, **_k: fake_qs)
 
     captured = {}
 
@@ -169,7 +169,7 @@ def test_scrape_view_post_maps_service_success_to_template_context(request_facto
 
     fake_qs = Mock()
     fake_qs.first.return_value = None
-    monkeypatch.setattr(scraping_views.ScrapedData.objects, "order_by", lambda *_a, **_k: fake_qs)
+    monkeypatch.setattr(scraping_views.SourceDocument.objects, "order_by", lambda *_a, **_k: fake_qs)
 
     class _FakeService:
         def execute(self, _req):

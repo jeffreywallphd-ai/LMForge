@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import re
 from typing import Any
 
-from studio.domain.models.source_documents import SourceDocument
+from studio.domain.models import SourceDocument
 from studio.infrastructure.scraping.generic_web import GenericWebScraper
 
 

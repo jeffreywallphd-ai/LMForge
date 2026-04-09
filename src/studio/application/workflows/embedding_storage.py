@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from studio.application.services.document_service import DocumentService
 from studio.application.services.vector_store_service import VectorStoreService
-from studio.domain.models.source_documents import SourceDocument
+from studio.domain.models import SourceDocument
 
 
 @dataclass(slots=True)
