@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'web/layouts/base.html' %}
 {% load static %}
 
 {% block title %} LMForge: Document Processor {% endblock %}
@@ -43,7 +43,7 @@
 
     <!-- URL Input Section -->
     <div id="urlSection" class="input-section" style="display: none;">
-        {% include "processor_url.html" %}
+        {% include "web/partials/document_processor/input_url.html" %}
 
         <div id="liveFeedback" class="list-group mb-3"></div>
 
@@ -52,14 +52,14 @@
 
     <!-- PDF Upload Section -->
     <div id="pdfSection" class="input-section" style="display: none;">
-        {% include "processor_pdf.html" %}
+        {% include "web/partials/document_processor/input_pdf.html" %}
 
         <div id="uploadResult" class="mb-4"></div>
     </div>
 
     <!-- Manual Text Entry Section -->
     <div id="textSection" class="input-section" style="display: none;">
-        {% include "processor_text.html" %}
+        {% include "web/partials/document_processor/input_text.html" %}
 
         <div id="manualTextResult" class="mb-4"></div>
     </div>

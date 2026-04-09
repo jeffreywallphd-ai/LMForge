@@ -1,11 +1,7 @@
 from django.shortcuts import render
-from django.conf import settings
-from studio.models import SourceDocument as ScrapedData, SourceDocumentMetadata as ScrapedDataMeta
-from studio.presentation.web.forms.documents import DocumentForm, DocumentProcessingForm
+from studio.models import SourceDocumentMetadata as ScrapedDataMeta
+from studio.presentation.web.forms.documents import DocumentForm
 from django.core.paginator import Paginator
-from django.conf.urls.static import static
-
-from huggingface_hub import HfApi
 from decouple import config
 
 DEFAULT_HF_KEY = config("HF_API_KEY", default="")
@@ -26,7 +22,7 @@ def dataset_workflow_view(request):
         messages.append(request.session.get("redirect_message"))
         del request.session["redirect_message"]
 
-    return render(request, "dataset_workflow.html", {"form": form, "documents":documents, "messages": messages})
+    return render(request, "web/pages/datasets/workflow.html", {"form": form, "documents":documents, "messages": messages})
 
 def dataset_workflow_document_processor(request):
-    return render(request, "document_upload.html")
+    return render(request, "web/pages/datasets/document_upload.html")

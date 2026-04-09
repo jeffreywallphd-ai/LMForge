@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'web/layouts/base.html' %}
 
 {% block title %} Generate Q&A {% endblock %}
 
@@ -46,7 +46,7 @@
 
     <form id="documentSelectionForm">
         {% csrf_token %}
-        {% include "document_list.html" %}
+        {% include "web/partials/datasets/document_list.html" %}
     </form>
 
     <div class="row">

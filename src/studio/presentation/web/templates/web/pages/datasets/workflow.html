@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'web/layouts/base.html' %}
 
 {% block title %} LMForge: Add Documents to Your Dataset {% endblock %}
 
@@ -24,10 +24,10 @@
     <h2>Processed Documents</h2>
     <div class="row">
         <div class="col-2">
-            <a href="{% url 'document-processor' %}" class="button success">+ New Document</a>
+            <a href="{% url 'document-processor-view' %}" class="button success">+ New Document</a>
         </div>
         <div class="col-2">
-            <form method="POST" action="{% url 'delete_document_mul' %}" id="deleteForm">
+            <form method="POST" action="{% url 'dataset-workflow' %}" id="deleteForm">
                 {% csrf_token %}
                 <a type="button" class="btn btn-danger" onclick="submitDeleteForm()">Delete Selected</a>
             </form>
@@ -35,12 +35,12 @@
     </div>
     <form id="documentSelectionForm">
         {% csrf_token %}
-        {% include "document_list.html" %}
+        {% include "web/partials/datasets/document_list.html" %}
     </form>
 
     <div class="row">
         <div class="col-2">
-            <form method="POST" action="{% url 'document_detail' %}" id="process_selected">
+            <form method="POST" action="{% url 'dataset-workflow' %}" id="process_selected">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-success mt-3" style="margin-bottom: 1vh;"
                     onclick="ProcessSelected()">
@@ -52,7 +52,7 @@
 
     <!-- ✅ New Button to Generate Chunks & Store in Qdrant -->
     <div class="col-3">
-        <form method="POST" action="{% url 'database-workflow' %}" id="generate_chunks_form">
+        <form method="POST" action="{% url 'dataset-workflow' %}" id="generate_chunks_form">
             {% csrf_token %}
             <button type="submit" class="btn btn-primary mt-3" style="margin-bottom: 1vh;"
                 onclick="redirectToChunkPage(event)">
@@ -103,7 +103,7 @@
     function deleteDocument(documentId) {
         if (confirm("Are you sure you want to delete this document?")) {
             var form = document.getElementById("deleteForm");
-            form.action = "{% url 'delete_document' 0 'redirect_url' %}".replace("0", documentId).replace("redirect_url", encodeURIComponent('dataset-workflow'));
+            form.action = "{% url 'dataset-workflow' %}".replace("0", documentId).replace("redirect_url", encodeURIComponent('dataset-workflow'));
             form.submit();
         }
     }

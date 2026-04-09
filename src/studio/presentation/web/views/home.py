@@ -87,7 +87,7 @@ def home_view(request):
         messages.append("ℹ Qdrant not installed. Vector database features are disabled.")
 
     # ---------- Render ----------
-    return render(request, 'home.html', {
+    return render(request, 'web/pages/home/home.html', {
         "messages": messages,
         "models": models,
         "datasets": datasets,
