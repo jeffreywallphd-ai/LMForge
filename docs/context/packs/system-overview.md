@@ -28,3 +28,12 @@
 - Keep new business logic in `application/services` and `application/workflows`.
 - Keep domain rules in `domain/policies`.
 - Use infrastructure modules for external integrations (scraping, vector store, storage).
+
+## Presentation Classification Quick Check
+
+When touching presentation code:
+
+- API files (`src/studio/presentation/api/**`) should expose machine-facing JSON contracts.
+- Web files (`src/studio/presentation/web/**`) should expose template/page contracts.
+- If behavior must be shared, move it to `application/services` or `application/workflows` instead of cross-importing API/web views.
+- See `docs/architecture/presentation-boundary-audit.md` for the current violation inventory and migration checklist.
