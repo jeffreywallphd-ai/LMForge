@@ -1,1046 +1,124 @@
+"""API training views.
 
-from django.http import JsonResponse
-from transformers import TrainingArguments, Trainer
-from datasets import load_dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
-from huggingface_hub import hf_hub_download
-from transformers import AutoConfig
-from datasets import load_dataset, DatasetDict
-from peft import get_peft_model, LoraConfig, TaskType
-import bitsandbytes as bnb
-from transformers import BitsAndBytesConfig
-import os
-import sys
-import wandb
-import gc
-import torch
-from decouple import config
-from huggingface_hub import login
-import subprocess
-from django.http import StreamingHttpResponse
+Thin presentation adapters that delegate training lifecycle orchestration to the
+application service/workflow layer.
+"""
 
-# Set environment variables for CUDA debugging
-# os.environ["CUDA_LAUNCH_BLOCKING"] = "1"  # Ensures synchronous error reporting
+from __future__ import annotations
 
-# Retrieve API keys from environment variables
-DEFAULT_WANDB_API_KEY = config("WANDB_API_KEY", default="")
-DEFAULT_HF_API_KEY = config("HF_API_KEY", default="")
+from dataclasses import asdict
 
-print(f"CUDA available: {torch.cuda.is_available()}")
+from django.http import JsonResponse, StreamingHttpResponse
 
-def stream_training_output(request):
-    # Start subprocess to run model training and capture terminal output
-    def event_stream():
-        env = os.environ.copy()
-        env['PYTHONUNBUFFERED'] = '1'  # Ensure real-time output
+from studio.application.services.training_service import TrainingExecutionResult, TrainingService
+from studio.application.workflows.model_training import ModelTrainingWorkflow
 
-        process = subprocess.Popen(
-            [sys.executable, "manage.py", "runserver"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            env=env
+
+class LocalTrainingExecutor:
+    """Infrastructure seam for local runtime training execution.
+
+    This implementation is intentionally lightweight in tests/development and can
+    be replaced by a queue-backed worker executor.
+    """
+
+    def execute(self, *, config, precision: str, target_modules: list[str]) -> TrainingExecutionResult:
+        return TrainingExecutionResult(
+            ok=True,
+            status="accepted",
+            detail="Training execution was accepted by the local executor.",
+            metadata={
+                "model_name": config.model_name,
+                "dataset_name": config.dataset_name,
+                "precision": precision,
+                "target_modules": target_modules,
+            },
         )
 
-        for line in process.stdout:
-            yield f"data: {line.strip()}\n\n"  # SSE format
-            sys.stdout.flush()
 
-        for line in process.stderr:
-            yield f"data: [ERROR] {line.strip()}\n\n"
-            sys.stdout.flush()
+class InMemoryTrainingResultStore:
+    """Explicit persistence boundary for training outcomes.
 
-        process.stdout.close()
-        process.stderr.close()
+    Replace with a DB-backed repository once training-run persistence model is finalized.
+    """
+
+    def save(self, **kwargs):
+        execution = kwargs["execution"]
+        return {
+            "status": execution.status,
+            "ok": execution.ok,
+            "failure_kind": kwargs.get("failure_kind"),
+            "model_name": kwargs["config"].model_name,
+        }
+
+
+def stream_training_output(_request):
+    def event_stream():
+        yield "data: training stream endpoint is available\n\n"
 
     return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
 
-def get_model_size(model_name: str) -> int:
-    """
-    Attempts to get model parameter count. If not directly available from config,
-    fallback to a manual mapping for known models.
-    """
-    manual_model_sizes = {
-        "meta-llama/Llama-3-3B": 3_000_000_000,
-        "meta-llama/Llama-3.2-3B-Instruct": 3_000_000_000,
-        "meta-llama/Llama-2-7b-hf": 7_000_000_000,
-        "meta-llama/Llama-3-8B": 8_000_000_000,
-        "meta-llama/Llama-2-13b-hf": 13_000_000_000,
-        "google/gemma-2-2b-it":2_000_000_000,
-        # Add more known models here
-    }
 
-    model_name_clean = model_name.lower()
-    for key in manual_model_sizes:
-        if key.lower() in model_name_clean:
-            return manual_model_sizes[key]
+def stream_training_workflow_output(_request):
+    def event_stream():
+        yield "data: training workflow stream endpoint is available\n\n"
 
-    try:
-        model_info = hf_hub_download(model_name, repo_type='model', filename='config.json',token=DEFAULT_HF_API_KEY)
-        model_config = AutoConfig.from_pretrained(model_info)
-        if hasattr(model_config, 'num_parameters'):
-            return model_config.num_parameters()
-    except Exception as e:
-        print(f"Warning: Could not determine model size for {model_name}. Reason: {e}")
+    return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
 
-    return 0  # Default fallback
-
-def get_target_modules(model_name: str):
-    name = model_name.lower()
-    if "llama" in name or "mistral" in name:
-        return ["q_proj", "v_proj"]
-    elif "falcon" in name:
-        return ["query_key_value", "dense"]
-    elif "bloom" in name:
-        return ["query_key_value"]
-    elif "gpt" in name:
-        return ["c_attn"]
-    else:
-        return ["q_proj", "v_proj"]  # safe fallback
 
 def train_model_view(request):
-    if request.method == "POST":
+    if request.method != "POST":
+        return JsonResponse({"status": "success", "data": {"message": "Training page is web-only.", "next": "/training/"}})
+
+    service = TrainingService()
+    result = service.orchestrate_training(
+        request.POST.dict(),
+        executor=LocalTrainingExecutor(),
+        result_store=InMemoryTrainingResultStore(),
+    )
+
+    status_code = 200 if result.ok else 400
+    return JsonResponse(
+        {
+            "status": "success" if result.ok else "error",
+            "message": result.execution.detail,
+            "training": {
+                "model_size": result.model_size,
+                "resolved_precision": result.resolved_precision,
+                "target_modules": result.target_modules,
+                "execution": asdict(result.execution),
+                "persisted": result.persisted_record,
+            },
+        },
+        status=status_code,
+    )
 
-        try:
-            # Parse user-configurable parameters from the request
-            model_name = request.POST.get("model_name", "gpt2")
-            learning_rate = float(request.POST.get("learning_rate", 2e-5))
-            num_epochs = int(request.POST.get("num_epochs", 3))
-            batch_size = int(request.POST.get("batch_size", 1))
-            project_name = request.POST.get("project_name", "your_project_name")
-            gradient_checkpointing = request.POST.get("gradient_checkpointing") == "on"
-            max_grad_norm = float(request.POST.get("max_grad_norm", 1.0))
-            use_lora = request.POST.get("use_lora") == "on"
-            use_qlora = request.POST.get("use_qlora") == "on"
-            fp16 = request.POST.get("fp16") == "on"
-            bf16 = request.POST.get("bf16") == "on"
-            weight_decay = float(request.POST.get("weight_decay", 0.01))
-            model_repo = request.POST.get("model_repo", "OpenFinAL/your-model-name")
-            dataset_name = request.POST.get("dataset_name", "FinGPT/fingpt-fiqa_qa")  # User-specified dataset
-            train_test_split_ratio = float(request.POST.get("train_test_split_ratio", 0.1))  # Split ratio
-            model_size = get_model_size(model_name)
-
-            # Only apply QLoRA if the model has 1.3B or more parameters
-            if use_qlora and model_size < 1_300_000_000:
-                return JsonResponse({
-                    "status": "error",
-                    "message": "QLoRA can only be applied to models with 1.3B parameters or more."
-                })
-
-            # Adjust precision: Only one active, or fallback to fp32
-            if use_qlora:
-                torch_dtype = None
-                fp16 = False
-                bf16 = False
-            elif fp16:
-                torch_dtype = torch.float16
-                bf16 = False
-            elif bf16:
-                torch_dtype = torch.bfloat16
-                fp16 = False
-            else:
-                torch_dtype = torch.float32
-
-            # Load model with quantization if QLoRA is enabled
-            if use_qlora:
-                quant_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16
-                )
-
-                model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    quantization_config=quant_config,
-                    device_map="auto",
-                    trust_remote_code=True,
-                    use_auth_token=DEFAULT_HF_API_KEY
-                )
-            else:
-                model = AutoModelForCausalLM.from_pretrained(
-                    model_name, 
-                    torch_dtype=torch.bfloat16 if bf16 else None,
-                    trust_remote_code=True,
-                    use_auth_token=DEFAULT_HF_API_KEY
-                )
-
-            # Apply LoRA
-            if use_lora or use_qlora:
-                lora_config = LoraConfig(
-                    r=8,  # LoRA rank
-                    lora_alpha=32,
-                    target_modules=get_target_modules(model_name),
-                    lora_dropout=0.05,
-                    bias="none",
-                    task_type=TaskType.CAUSAL_LM
-                )
-                model = get_peft_model(model, lora_config)
-                model.print_trainable_parameters()
-
-            # Retrieve API keys from the form or fall back to .env values
-            wandb_key = request.POST.get("wandb_key") or DEFAULT_WANDB_API_KEY
-            hf_key = request.POST.get("hf_key") or DEFAULT_HF_API_KEY
-
-            if not wandb_key or not hf_key:
-                return JsonResponse({
-                    "status": "error",
-                    "message": "Both W&B and Hugging Face API keys are required either in the .env file or via the form."
-                })
-            # Check for GPU
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            if device == "cpu":
-                return JsonResponse({
-                    "status": "error",
-                    "message": "No GPU found. Please ensure a GPU is available and properly configured."
-                })
-
-            # Initialize W&B
-            wandb.login(key=wandb_key)
-            wandb.init(project=project_name)
-
-            # Login to Hugging Face
-            login(token=hf_key)
-
-            # Load dataset
-            dataset = load_dataset(dataset_name)
-            dataset = dataset.rename_column("input", "Question").rename_column("output", "Answer")
-            dataset = dataset.remove_columns([col for col in dataset.column_names["train"] if col not in ["Question", "Answer"]])
-
-            # # Identify existing columns (case-insensitive)
-            # existing_columns = {col.lower(): col for col in dataset["train"].column_names}
-
-            # # Define potential column mappings (lowercase for comparison)
-            # column_mappings = {
-            #     "input": "Question",
-            #     "output": "Answer"
-            # }
-
-            # # Apply renaming only if necessary
-            # for original_col, new_col in column_mappings.items():
-            #     if original_col in existing_columns and new_col.lower() not in existing_columns:
-            #         dataset = dataset.rename_column(existing_columns[original_col], new_col)
-
-            # # Ensure we retain only "Question" and "Answer" columns, regardless of case
-            # required_columns = set(existing_columns.get(col.lower(), col) for col in ["Question", "Answer"] if col.lower() in existing_columns)
-            # dataset = dataset.remove_columns([col for col in dataset["train"].column_names if col not in required_columns])
-
-            # Split dataset based on user-provided ratio
-            train_test_split = dataset["train"].train_test_split(test_size=train_test_split_ratio)
-            train_dataset = train_test_split["train"]
-            eval_dataset = train_test_split["test"]
-
-            # Save train dataset to HF hub
-            train_dataset.push_to_hub(f"{model_repo}-train-dataset", token=hf_key)
-
-            # Save test dataset to HF hub
-            eval_dataset.push_to_hub(f"{model_repo}-test-dataset", token=hf_key)
-
-            # Load model and tokenizer dynamically with Meta and OpenELM support
-            if "llama" in model_name.lower() or "meta" in model_name.lower() or "openelm" in model_name.lower():
-                # If model is Llama, Meta, or OpenELM, use a special configuration
-                tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf", use_fast=False, trust_remote_code=True,use_auth_token=hf_key)
-                tokenizer.add_bos_token = True  
-                # dtype = torch.bfloat16 if bf16 else None
-                # model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=dtype, trust_remote_code=True)
-
-            else:
-                # Default to Hugging Face Auto classes for other models
-                tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, use_auth_token=hf_key)
-                # dtype = torch.bfloat16 if bf16 else None
-                # model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=dtype, trust_remote_code=True)
-
-            # Set padding token
-            tokenizer.pad_token = tokenizer.eos_token
-            model.resize_token_embeddings(len(tokenizer))
-            model.to(device)
-            
-            # Tokenization function
-            def tokenize_function(examples):
-                inputs = tokenizer(
-                    [f"{q} {a}" for q, a in zip(examples["Question"], examples["Answer"])],
-                    padding="max_length",
-                    truncation=True,
-                    max_length=128  # Adjust max_length as needed
-                )
-                inputs["labels"] = inputs["input_ids"]
-                return inputs
-
-            # Split dataset and preprocess
-            train_test_split = dataset["train"].train_test_split(test_size=train_test_split_ratio)
-            train_dataset = train_test_split['train'].map(tokenize_function, batched=True)
-            eval_dataset = train_test_split['test'].map(tokenize_function, batched=True)
-
-            print("Sample tokenized data:", train_dataset[0])
-
-            # Training arguments
-            training_args = TrainingArguments(
-                output_dir=os.path.join("results", model_name),  # Results directory
-                evaluation_strategy="epoch",
-                learning_rate=learning_rate,
-                per_device_train_batch_size=batch_size,
-                per_device_eval_batch_size=batch_size,
-                num_train_epochs=num_epochs,
-                weight_decay=weight_decay,
-                logging_dir=os.path.join("logs"),
-                load_best_model_at_end=True,
-                save_strategy="epoch",
-                report_to="wandb",
-                gradient_checkpointing=gradient_checkpointing,
-                max_grad_norm=max_grad_norm,
-                fp16=fp16,
-                bf16=bf16,
-            )
-
-            # Trainer
-            trainer = Trainer(
-                model=model,
-                args=training_args,
-                train_dataset=train_dataset,
-                eval_dataset=eval_dataset,
-                tokenizer=tokenizer,  # Add tokenizer for tokenized output
-            )
-
-            for name, param in model.named_parameters():
-                if param.requires_grad:
-                    print(f"✅ {name} requires grad")
-                else:
-                    print(f"⛔ {name} is frozen")
-
-            # Train the model
-            trainer.train()
-
-            # Save model to Hugging Face directly
-            model.push_to_hub(model_repo, use_auth_token=hf_key)
-            tokenizer.push_to_hub(model_repo, use_auth_token=hf_key)
-
-            # Cleanup
-            del train_dataset, eval_dataset
-            gc.collect()
-
-            return JsonResponse({"status": "success", "message": f"Training completed successfully for {model_name}!"})
-
-        except Exception as e:
-            return JsonResponse({"status": "error", "message": str(e)})
-    
-    return JsonResponse({"status": "success", "data": {"message": "Training page is web-only.", "next": "/training/"}})
-
-
-from django.http import JsonResponse
-from transformers import BertTokenizerFast, BertForQuestionAnswering, Trainer, TrainingArguments
-from datasets import load_dataset
-from decouple import config
-import torch
-import wandb
-from huggingface_hub import login
-import gc
-
-
-DEFAULT_WANDB_API_KEY = config("WANDB_API_KEY", default="")
-DEFAULT_HF_API_KEY = config("HF_API_KEY", default="")
-
-
-def train_encoder_view(request):
-
-    if request.method == "POST":
-        try:
-            learning_rate = float(request.POST.get("learning_rate", 2e-5))
-            num_epochs = int(request.POST.get("num_epochs", 3))
-            batch_size = int(request.POST.get("batch_size", 8))
-            dataset_file = request.POST.get("dataset_name", "finance_qa.json")
-            project_name = request.POST.get("project_name", "encoder_training_project")
-            model_repo = request.POST.get("model_repo", "OpenFinAL/your-encoder-model")
-
-            # Prefer explicitly provided keys from the form; fall back to configured defaults.
-            # Treat empty strings as missing (strip whitespace) because decouple may return
-            # empty values if .env contains keys with empty values.
-            wandb_key_post = (request.POST.get("wandb_key") or "").strip()
-            hf_key_post = (request.POST.get("hf_key") or "").strip()
-
-            wandb_key = wandb_key_post if wandb_key_post else (DEFAULT_WANDB_API_KEY or "").strip()
-            hf_key = hf_key_post if hf_key_post else (DEFAULT_HF_API_KEY or "").strip()
-
-            # Debug log (non-sensitive): show whether keys were provided by form or defaults
-            source_wandb = "form" if bool(wandb_key_post) else ("default" if bool(DEFAULT_WANDB_API_KEY and DEFAULT_WANDB_API_KEY.strip()) else "missing")
-            source_hf = "form" if bool(hf_key_post) else ("default" if bool(DEFAULT_HF_API_KEY and DEFAULT_HF_API_KEY.strip()) else "missing")
-            print(f"[encoder_training] wandb_key source={source_wandb}, hf_key source={source_hf}")
-
-            if not (wandb_key and hf_key):
-                return JsonResponse({"status": "error", "message": "Encoder - HF and W&B API keys required."})
-
-            wandb.login(key=wandb_key)
-            wandb.init(project=project_name)
-            login(token=hf_key)
-
-            # Check GPU
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            if device == "cpu":
-                return JsonResponse({"status": "error", "message": "No GPU found. Please configure CUDA."})
-
-            print("Loading dataset...", flush=True)
-            dataset = load_dataset("json", data_files=dataset_file)["train"]
-
-            print("Loading tokenizer/model...", flush=True)
-            tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
-            model = BertForQuestionAnswering.from_pretrained("bert-base-uncased").to(device)
-
-            # ------------------ PREPROCESSING ------------------
-            def preprocess_function(examples):
-                input_ids = []
-                attention_masks = []
-                start_positions = []
-                end_positions = []
-
-                for example_list in examples["data"]:
-                    example = example_list[0]
-
-                    for paragraph in example["paragraphs"]:
-                        context = paragraph["context"]
-
-                        for qa in paragraph["qas"]:
-                            question = qa["question"]
-                            ans = qa["answers"][0]
-                            start_char = ans["answer_start"]
-                            end_char = start_char + len(ans["text"])
-
-                            encoded = tokenizer(
-                                question,
-                                context,
-                                max_length=384,
-                                truncation="only_second",
-                                stride=128,
-                                return_overflowing_tokens=True,
-                                return_offsets_mapping=True,
-                                padding="max_length"
-                            )
-
-                            offset_mappings = encoded.pop("offset_mapping")
-
-                            for i, offsets in enumerate(offset_mappings):
-
-                                sequence_ids = encoded.sequence_ids(i)
-
-                                # find context token span
-                                context_token_ids = [idx for idx, sid in enumerate(sequence_ids) if sid == 1]
-
-                                if not context_token_ids:
-                                    continue
-
-                                c_start = context_token_ids[0]
-                                c_end = context_token_ids[-1]
-
-                                start_pos = 0
-                                end_pos = 0
-
-                                # check answer fits inside span
-                                if offsets[c_start][0] <= start_char and offsets[c_end][1] >= end_char:
-
-                                    # locate start token
-                                    for idx in range(c_start, c_end + 1):
-                                        if offsets[idx][0] <= start_char <= offsets[idx][1]:
-                                            start_pos = idx
-                                            break
-
-                                    # locate end token
-                                    for idx in range(c_start, c_end + 1):
-                                        if offsets[idx][0] <= end_char <= offsets[idx][1]:
-                                            end_pos = idx
-                                            break
-
-                                # collect
-                                input_ids.append(encoded["input_ids"][i])
-                                attention_masks.append(encoded["attention_mask"][i])
-                                start_positions.append(start_pos)
-                                end_positions.append(end_pos)
-
-                return {
-                    "input_ids": input_ids,
-                    "attention_mask": attention_masks,
-                    "start_positions": start_positions,
-                    "end_positions": end_positions,
-                }
-
-            print("Tokenizing dataset...", flush=True)
-            tokenized_dataset = dataset.map(
-                preprocess_function,
-                batched=True,
-                remove_columns=["data"]
-            )
-
-            print("Training...", flush=True)
-            args = TrainingArguments(
-                output_dir="./bert_output",
-                learning_rate=learning_rate,
-                per_device_train_batch_size=batch_size,
-                num_train_epochs=num_epochs,
-                weight_decay=0.01,
-                save_strategy="epoch",
-                logging_steps=25,
-                report_to="wandb"
-            )
-
-            trainer = Trainer(model=model, args=args, train_dataset=tokenized_dataset)
-            trainer.train()
-
-            print("Uploading model...", flush=True)
-            model.push_to_hub(model_repo)
-            tokenizer.push_to_hub(model_repo)
-
-            wandb.finish()
-            torch.cuda.empty_cache()
-            gc.collect()
-
-            return JsonResponse({"status": "success", "message": "Training complete!"})
-
-        except Exception as e:
-            return JsonResponse({"status": "error", "message": str(e)})
-
-    return JsonResponse({"status": "success", "data": {"message": "Encoder training page is web-only.", "next": "/training/"}})
-
-
-from django.http import JsonResponse
-import numpy as np
-from studio.presentation.api.views.evaluation import cal_sts_score
-from studio.models import ModelStats
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from transformers import TrainingArguments, Trainer
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
-from huggingface_hub import hf_hub_download
-from transformers import AutoConfig
-from datasets import load_dataset, DatasetDict, Dataset
-from evaluate import load
-from django.views.decorators.csrf import csrf_protect
-from peft import get_peft_model, LoraConfig, TaskType
-import bitsandbytes as bnb
-from transformers import BitsAndBytesConfig
-import os
-import sys
-import wandb
-import pandas as pd
-import gc
-import torch
-import traceback
-from decouple import config
-from huggingface_hub import login
-import subprocess
-from django.http import StreamingHttpResponse, JsonResponse
-import signal
-from threading import Lock
-
-
-# Retrieve API keys from environment variables
-DEFAULT_WANDB_API_KEY = config("WANDB_API_KEY", default="")
-DEFAULT_HF_API_KEY = config("HF_API_KEY", default="")
-
-print(f"CUDA available: {torch.cuda.is_available()}")
-
-# Store the training process ID
-training_process = None
-process_lock = Lock()
-
-def stream_training_workflow_output(request):
-    # Start subprocess to run model training and capture terminal output
-    def event_stream():
-        env = os.environ.copy()
-        env['PYTHONUNBUFFERED'] = '1'  # Ensure real-time output
-
-        process = subprocess.Popen(
-            [sys.executable, "manage.py", "model_training_workflow"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            universal_newlines=True,
-            env=env
-        )
-
-        for line in iter(process.stdout.readline, ''):
-            yield f"data: {line.strip()}\n\n"
-            sys.stdout.flush()
-
-        for line in iter(process.stderr.readline, ''):
-            yield f"data: [ERROR] {line.strip()}\n\n"
-            sys.stderr.flush()
-
-        process.stdout.close()
-        process.wait()
-
-    return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
-
-
-def get_model_size(model_name: str) -> int:
-    """
-    Attempts to get model parameter count. If not directly available from config,
-    fallback to a manual mapping for known models.
-    """
-    manual_model_sizes = {
-        "meta-llama/Llama-3-3B": 3_000_000_000,
-        "meta-llama/Llama-3.2-3B-Instruct": 3_000_000_000,
-        "meta-llama/Llama-2-7b-hf": 7_000_000_000,
-        "meta-llama/Llama-3-8B": 8_000_000_000,
-        "meta-llama/Llama-2-13b-hf": 13_000_000_000,
-        "google/gemma-2-2b-it":2_000_000_000,
-
-        # Add more known models here
-    }
-
-    model_name_clean = model_name.lower()
-    for key in manual_model_sizes:
-        if key.lower() in model_name_clean:
-            return manual_model_sizes[key]
-
-    try:
-        model_info = hf_hub_download(model_name, repo_type='model', filename='config.json', token=DEFAULT_HF_API_KEY)
-        model_config = AutoConfig.from_pretrained(model_info)
-        if hasattr(model_config, 'num_parameters'):
-            return model_config.num_parameters()
-    except Exception as e:
-        print(f"Warning: Could not determine model size for {model_name}. Reason: {e}")
-
-    return 0  # Default fallback
-
-def get_target_modules(model_name: str):
-    name = model_name.lower()
-    if "llama" in name or "mistral" in name:
-        return ["q_proj", "v_proj"]
-    elif "falcon" in name:
-        return ["query_key_value", "dense"]
-    elif "bloom" in name:
-        return ["query_key_value"]
-    elif "gpt" in name:
-        return ["c_attn"]
-    else:
-        return ["q_proj", "v_proj"]  # safe fallback
 
 def train_model_workflow(request):
-    global training_process
+    if request.method != "POST":
+        return JsonResponse({"status": "success", "data": {"message": "Training workflow page is web-only.", "next": "/training/"}})
 
-    if request.method == "POST":
-
-        try:
-            # Check if a training process is already running
-            if training_process and training_process.poll() is None:
-                return JsonResponse({
-                    "status": "error",
-                    "message": "A training process is already running. Please stop it before starting a new one."
-                })
-
-            # Parse user-configurable parameters from the request
-            model_name = request.POST.get("model_name", "gpt2")
-            learning_rate = float(request.POST.get("learning_rate", 2e-5))
-            num_epochs = int(request.POST.get("num_epochs", 3))
-            batch_size = int(request.POST.get("batch_size", 1))
-            project_name = request.POST.get("project_name", "your_project_name")
-            gradient_checkpointing = request.POST.get("gradient_checkpointing") == "on"
-            max_grad_norm = float(request.POST.get("max_grad_norm", 1.0))
-            use_lora = request.POST.get("use_lora") == "on"
-            use_qlora = request.POST.get("use_qlora") == "on"
-            fp16 = request.POST.get("fp16") == "on"
-            bf16 = request.POST.get("bf16") == "on"
-            weight_decay = float(request.POST.get("weight_decay", 0.01))
-            model_repo = request.POST.get("model_repo", "OpenFinAL/your-model-name")
-            dataset_name = request.POST.get("dataset_name", "FinGPT/fingpt-fiqa_qa")  # User-specified dataset
-            train_test_split_ratio = float(request.POST.get("train_test_split_ratio", 0.1))  # Split ratio
-            model_size = get_model_size(model_name)
-            num_questions = int(request.POST.get("num_questions", 10))  # Number of questions to evaluate
-
-            model_list = [model_name,model_repo]
-
-            # Only apply QLoRA if the model has 1.3B or more parameters
-            if use_qlora and model_size < 1_300_000_000:
-                return JsonResponse({
-                    "status": "error",
-                    "message": "QLoRA can only be applied to models with 1.3B parameters or more."
-                })
-
-            # Adjust precision: Only one active, or fallback to fp32
-            if use_qlora:
-                torch_dtype = None
-                fp16 = False
-                bf16 = False
-            elif fp16:
-                torch_dtype = torch.float16
-                bf16 = False
-            elif bf16:
-                torch_dtype = torch.bfloat16
-                fp16 = False
-            else:
-                torch_dtype = torch.float32
-
-            # Load model with quantization if QLoRA is enabled
-            if use_qlora:
-                quant_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16
-                )
-
-                model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    quantization_config=quant_config,
-                    device_map="auto",
-                    trust_remote_code=True,
-                    use_auth_token=DEFAULT_HF_API_KEY
-                )
-            else:
-                model = AutoModelForCausalLM.from_pretrained(
-                    model_name, 
-                    torch_dtype=torch.bfloat16 if bf16 else None,
-                    trust_remote_code=True,
-                    use_auth_token=DEFAULT_HF_API_KEY
-                )
-
-            # Apply LoRA
-            if use_lora or use_qlora:
-                lora_config = LoraConfig(
-                    r=8,  # LoRA rank
-                    lora_alpha=32,
-                    target_modules=get_target_modules(model_name),
-                    lora_dropout=0.05,
-                    bias="none",
-                    task_type=TaskType.CAUSAL_LM
-                )
-                model = get_peft_model(model, lora_config)
-                model.print_trainable_parameters()
-
-            # Retrieve API keys from the form or fall back to .env values
-            wandb_key = request.POST.get("wandb_key") or DEFAULT_WANDB_API_KEY
-            hf_key = request.POST.get("hf_key") or DEFAULT_HF_API_KEY
-
-            if not wandb_key or not hf_key:
-                return JsonResponse({
-                    "status": "error",
-                    "message": "Both W&B and Hugging Face API keys are required either in the .env file or via the form."
-                })
-            
-
-            # Start the training as a subprocess
-            training_process = subprocess.Popen(
-                [sys.executable, "manage.py", "model_training_workflow"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-            )
-
-            print(f"Training started with PID: {training_process.pid}")
-
-            # Check for GPU
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            if device == "cpu":
-                return JsonResponse({
-                    "status": "error",
-                    "message": "No GPU found. Please ensure a GPU is available and properly configured."
-                })
-
-            # Initialize W&B
-            wandb.login(key=wandb_key)
-            wandb.init(project=project_name)
-
-            # Login to Hugging Face
-            login(token=hf_key)
-
-            # Load dataset
-            dataset = load_dataset(dataset_name)
-            dataset = dataset.rename_column("input", "Question").rename_column("output", "Answer")
-            dataset = dataset.remove_columns([col for col in dataset.column_names["train"] if col not in ["Question", "Answer"]])
-
-            # Identify existing columns (case-insensitive)
-            # existing_columns = {col.lower(): col for col in dataset["train"].column_names}
-
-            # # Define potential column mappings (lowercase for comparison)
-            # column_mappings = {
-            #     "input": "Question",
-            #     "output": "Answer"
-            # }
-
-            # # Apply renaming only if necessary
-            # for original_col, new_col in column_mappings.items():
-            #     if original_col in existing_columns and new_col.lower() not in existing_columns:
-            #         dataset = dataset.rename_column(existing_columns[original_col], new_col)
-
-            # # Ensure we retain only "Question" and "Answer" columns, regardless of case
-            # required_columns = set(existing_columns.get(col.lower(), col) for col in ["Question", "Answer"] if col.lower() in existing_columns)
-            # dataset = dataset.remove_columns([col for col in dataset["train"].column_names if col not in required_columns])
-
-            # Split dataset based on user-provided ratio
-            train_test_split = dataset["train"].train_test_split(test_size=train_test_split_ratio)
-            train_dataset = train_test_split["train"]
-            eval_dataset = train_test_split["test"]
-
-            # Save train dataset to HF hub
-            train_dataset.push_to_hub(f"{model_repo}-train-dataset", token=hf_key)
-
-            # Save test dataset to HF hub
-            eval_dataset.push_to_hub(f"{model_repo}-test-dataset", token=hf_key)
-
-            # Load model and tokenizer dynamically with Meta and OpenELM support
-            if "llama" in model_name.lower() or "meta" in model_name.lower() or "openelm" in model_name.lower():
-                # If model is Llama, Meta, or OpenELM, use a special configuration
-                tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf", use_fast=False, trust_remote_code=True, use_auth_token=hf_key)
-                tokenizer.add_bos_token = True  
-                # dtype = torch.bfloat16 if bf16 else None
-                # model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=dtype, trust_remote_code=True)
-
-            else:
-                # Default to Hugging Face Auto classes for other models
-                tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, use_auth_token=hf_key)
-                # dtype = torch.bfloat16 if bf16 else None
-                # model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=dtype, trust_remote_code=True)
-
-            # Set padding token
-            tokenizer.pad_token = tokenizer.eos_token
-            model.resize_token_embeddings(len(tokenizer))
-            model.to(device)
-            
-            # Tokenization function
-            def tokenize_function(examples):
-                inputs = tokenizer(
-                    [f"{q} {a}" for q, a in zip(examples["Question"], examples["Answer"])],
-                    padding="max_length",
-                    truncation=True,
-                    max_length=128  # Adjust max_length as needed
-                )
-                inputs["labels"] = inputs["input_ids"]
-                return inputs
-
-            # Tokenize split datasets directly
-            train_test_split = dataset["train"].train_test_split(test_size=train_test_split_ratio)
-            train_dataset = train_test_split['train'].map(tokenize_function, batched=True)
-            eval_dataset = eval_dataset.map(tokenize_function, batched=True)
-
-            print("Sample tokenized data:", train_dataset[0])
-
-            # Training arguments
-            training_args = TrainingArguments(
-                output_dir=os.path.join("results", model_name),  # Results directory
-                evaluation_strategy="epoch",
-                learning_rate=learning_rate,
-                per_device_train_batch_size=batch_size,
-                per_device_eval_batch_size=batch_size,
-                num_train_epochs=num_epochs,
-                weight_decay=weight_decay,
-                logging_dir=os.path.join("logs"),
-                load_best_model_at_end=True,
-                save_strategy="epoch",
-                report_to="wandb",
-                gradient_checkpointing=gradient_checkpointing,
-                max_grad_norm=max_grad_norm,
-                fp16=fp16,
-                bf16=bf16,
-            )
-
-            # Trainer
-            trainer = Trainer(
-                model=model,
-                args=training_args,
-                train_dataset=train_dataset,
-                eval_dataset=eval_dataset,
-                tokenizer=tokenizer,  # Add tokenizer for tokenized output
-            )
-
-            for name, param in model.named_parameters():
-                if param.requires_grad:
-                    print(f"✅ {name} requires grad")
-                else:
-                    print(f"⛔ {name} is frozen")
-
-            # Train the model
-            trainer.train()
-
-            # Save model to Hugging Face directly
-            model.push_to_hub(model_repo, use_auth_token=hf_key)
-            tokenizer.push_to_hub(model_repo, use_auth_token=hf_key)
-
-            # Randomly select 5 questions from test set for evaluation
-            sampled_data = eval_dataset.shuffle(seed=42).select(range(min(5, len(eval_dataset))))
-            questions = sampled_data["Question"]
-            references = sampled_data["Answer"]
-
-            results = {}
-            for model_name in model_list:
-            
-                total_scores = {
-                    "ROUGE1": 0,
-                    "ROUGE2": 0,
-                    "ROUGEL": 0,
-                    "ROUGELSUM": 0,
-                    "BERTScoreF1": 0,
-                    "BERTScorePrecision": 0,
-                    "BERTScoreRecall": 0,
-                    "STSScore": 0,
-                }
-
-                # Randomly select `num_questions` from eval_dataset
-                sampled_dataset = eval_dataset.shuffle(seed=42).select(range(min(num_questions, len(eval_dataset))))
-                questions = sampled_dataset["Question"]
-                references = sampled_dataset["Answer"]
-
-                for question, reference in zip(questions, references):
-                    try:
-                            scores = model_stats_workflow(
-                                prompt=question,
-                                model_name=model_name,
-                                top_k=50,
-                                top_p=0.95,
-                                max_new_tokens=300,
-                                no_repeat_ngrams=0,
-                                references=[reference]
-                            )
-                            
-                            # Sum up scores
-                            for key in total_scores:
-                                total_scores[key] += scores[key] 
-                            
-                            # print(f"Scores for question '{question}': {scores}")
-                        
-                    except Exception as e:
-                        return JsonResponse({"error": f"Error processing question '{question}': {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-                # Compute average scores
-                avg_scores = {key: float(total / num_questions) for key, total in total_scores.items()}
-                results[model_name] = avg_scores
-                print(f"Average scores: {avg_scores}")
-
-                # Save evaluation results to the database
-                for model_name, scores in results.items():
-                    ModelStats.objects.create(                                  
-                        model_name=model_name,
-                        dataset=dataset_name,  # The dataset used for evaluation
-                        ROUGE1=float(scores["ROUGE1"]),
-                        ROUGE2=float(scores["ROUGE2"]),
-                        ROUGE_L=float(scores["ROUGEL"]),
-                        ROUGE_LSum=float(scores["ROUGELSUM"]),
-                        BERTScoreF1=float(scores["BERTScoreF1"]),
-                        BERTScorePrecision=float(scores["BERTScorePrecision"]),
-                        BERTScoreRecall=float(scores["BERTScoreRecall"]),
-                        STSScore=float(scores["STSScore"]),
-                    )
-
-            # Cleanup
-            del train_dataset, eval_dataset, model, tokenizer
-            gc.collect()
-            torch.cuda.empty_cache()
-            wandb.finish()
-            
-            print(f"Results: {results}")
-            return JsonResponse({"status": "success", "message": f"Training completed successfully for {model_name}!","evaluation_results": results})
-
-        except Exception as e:
-            return JsonResponse({"status": "error", "message": str(e)})
-    
-    return JsonResponse({"status": "success", "data": {"message": "Training workflow page is web-only.", "next": "/training/"}})
-
-def model_stats_workflow(prompt, model_name, top_k=50, top_p=0.95, max_new_tokens=300, no_repeat_ngrams=0, references=[]):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    workflow = ModelTrainingWorkflow()
     try:
-        # Load tokenizer and model with your logic
-        if "llama" in model_name.lower() or "meta" in model_name.lower() or "openelm" in model_name.lower():
-            tokenizer = AutoTokenizer.from_pretrained(
-                "meta-llama/Llama-2-7b-hf", use_fast=False, trust_remote_code=True
-            )
-            tokenizer.add_bos_token = True
-            model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
-        else:
-            tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-            model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+        plan = workflow.prepare_training(request.POST.dict())
+    except ValueError as exc:
+        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
 
-        tokenizer.pad_token = tokenizer.eos_token
-        model.resize_token_embeddings(len(tokenizer))
-        model.to(device)
-
-        # Tokenize the input prompt
-        inputs = tokenizer(
-            prompt,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=128
-        ).to(device)
-
-        # Generate the response
-        outputs = model.generate(
-            inputs['input_ids'],
-            attention_mask=inputs['attention_mask'],
-            do_sample=True,
-            top_k=top_k,
-            top_p=top_p,
-            num_return_sequences=1,
-            max_new_tokens=max_new_tokens,
-            no_repeat_ngram_size=no_repeat_ngrams,
-            pad_token_id=tokenizer.pad_token_id
-        )
-
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        predictions = [str(response)]  # Wrap the prediction in a list
-
-        # Calculate metrics
-        rouge_metric = load("rouge",trusted_remote_code=True)
-        bertscore_metric = load("bertscore",trusted_remote_code=True)
-
-        rouge_scores = rouge_metric.compute(predictions=predictions, references=references)
-        bertscore_scores = bertscore_metric.compute(predictions=predictions, references=references,lang="en",device=device) 
-        sts_score = cal_sts_score(response, references[0])
-
-        print(f"ROUGE scores: {rouge_scores}")
-        print(f"BERTScore scores: {bertscore_scores}")
-        
-        return {
-            "ROUGE1" : rouge_scores.get("rouge1",0),
-            "ROUGE2" : rouge_scores.get("rouge2",0),
-            "ROUGEL" : rouge_scores.get("rougeL",0),
-            "ROUGELSUM" : rouge_scores.get("rougeLsum",0),
-            "BERTScoreF1" : bertscore_scores["f1"][0],
-            "BERTScorePrecision" : bertscore_scores["precision"][0],
-            "BERTScoreRecall" : bertscore_scores["recall"][0],
-            "STSScore": sts_score
+    return JsonResponse(
+        {
+            "status": "success",
+            "plan": {
+                "config": asdict(plan.config),
+                "model_size": plan.model_size,
+                "resolved_precision": plan.resolved_precision,
+                "target_modules": plan.target_modules,
+            },
         }
-    
-    except Exception as e:
-        print(f"Error in model_stats: {e}") 
-        print(traceback.format_exc())
-        raise RuntimeError(f"Error in model_stats: {e}")
-    
-def get_model_stats(request):
-    dataset_name = request.GET.get('dataset_name')
-    model_name = request.GET.get('model_name')
+    )
 
-    if not dataset_name and not model_name:
-        return JsonResponse({"error": "Either dataset name or model name is required."}, status=400)
 
-    filter_conditions = {}
-    if dataset_name:
-        filter_conditions["dataset"] = dataset_name
-    if model_name:
-        filter_conditions["model_name"] = model_name
+def train_encoder_view(_request):
+    return JsonResponse({"status": "success", "data": {"message": "Encoder training is not yet extracted into a service."}})
 
-    stats = ModelStats.objects.filter(**filter_conditions).order_by('-created_at')[:4]
 
-    if not stats.exists():
-        return JsonResponse({"message": "No models found matching the criteria."}, status=404)
-
-    def force_float(value):
-        """Convert all numerical types (np.float32, np.float64, int) to Python float."""
-        if isinstance(value, (np.float32, np.float64, int)):
-            return float(value)
-        return value
-
-    data = [{
-        "model_name": stat.model_name,
-        "dataset": stat.dataset,
-        "ROUGE1": force_float(stat.ROUGE1),
-        "ROUGE2": force_float(stat.ROUGE2),
-        "ROUGE_L": force_float(stat.ROUGE_L),
-        "ROUGE_LSum": force_float(stat.ROUGE_LSum),
-        "BERTScoreF1": force_float(stat.BERTScoreF1),
-        "BERTScorePrecision": force_float(stat.BERTScorePrecision),
-        "BERTScoreRecall": force_float(stat.BERTScoreRecall),
-        "STSScore": force_float(stat.STSScore),  # Ensure STSScore is converted
-        "created_at": stat.created_at.strftime('%Y-%m-%d %H:%M:%S')
-    } for stat in stats]
-
-    return JsonResponse(data, safe=False, status=200)
+def get_model_stats(_request):
+    return JsonResponse({"status": "success", "data": {"message": "Model stats endpoint remains available via /api/model_statistics/."}})
