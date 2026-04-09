@@ -6,6 +6,7 @@ from rest_framework.test import APIRequestFactory
 
 from studio.application.services.chat_service import (
     ChatExecutionError,
+    ChatServiceError,
     ModelSessionUnavailableError,
 )
 from studio.presentation.api.views import chat as chat_views
@@ -48,8 +49,10 @@ def test_session_create_view_generates_uuid_via_chat_service(monkeypatch) -> Non
     response = chat_views.SessionCreateView.as_view()(request)
 
     assert response.status_code == 201
-    assert response.data["status"] == "success"
-    assert response.data["data"]["session_id"] == "fixed-session"
+    assert response.data == {
+        "status": "success",
+        "data": {"session_id": "fixed-session"},
+    }
 
 
 def test_session_and_conversation_list_views_use_chat_service(monkeypatch) -> None:
@@ -104,7 +107,28 @@ def test_chatbot_generate_response_rejects_invalid_generation_bounds() -> None:
     response = chat_views.ChatbotGenerateResponseView.as_view()(request, session_id="s1")
 
     assert response.status_code == 400
-    assert "min_length must be <= max_length" in response.data["error"]["message"]
+    assert response.data == {
+        "status": "error",
+        "error": {
+            "code": "validation_error",
+            "message": "min_length must be <= max_length and within valid range",
+        },
+    }
+
+
+def test_chatbot_generate_response_rejects_get_method() -> None:
+    request = APIRequestFactory().get("/api/chatbot/s1/response/")
+
+    response = chat_views.ChatbotGenerateResponseView.as_view()(request)
+
+    assert response.status_code == 405
+    assert response.data == {
+        "status": "error",
+        "error": {
+            "code": "method_not_allowed",
+            "message": "This endpoint only supports POST.",
+        },
+    }
 
 
 def test_chatbot_generate_response_saves_user_and_bot_messages(monkeypatch) -> None:
@@ -120,11 +144,14 @@ def test_chatbot_generate_response_saves_user_and_bot_messages(monkeypatch) -> N
 
     assert response.status_code == 200
     assert response.data["status"] == "success"
-    assert response.data["data"]["bot_response"] == "Stubbed reply"
+    assert response.data["data"] == {
+        "user_message": "How are you?",
+        "bot_response": "Stubbed reply",
+        "generation_params": {"model_name": "gpt2"},
+    }
     assert len(fake_service.saved_messages) == 2
     assert fake_service.saved_messages[0][2] is True
     assert fake_service.saved_messages[1][2] is False
-
 
 
 def test_chatbot_generate_response_maps_model_session_errors(monkeypatch) -> None:
@@ -161,6 +188,28 @@ def test_chatbot_generate_response_maps_execution_errors(monkeypatch) -> None:
 
     assert response.status_code == 502
     assert response.data["error"]["code"] == "execution_failure"
+
+
+def test_chatbot_generate_response_maps_internal_chat_service_errors(monkeypatch) -> None:
+    class _InternalServiceError(ChatServiceError):
+        pass
+
+    class _InternalFailureService(_FakeChatService):
+        def run_chat_turn(self, *, session_id: str, payload):
+            raise _InternalServiceError("internal")
+
+    monkeypatch.setattr(chat_views, "get_chat_service", lambda: _InternalFailureService())
+
+    request = APIRequestFactory().post(
+        "/api/chatbot/s1/response/",
+        {"message": "How are you?", "model_name": "gpt2"},
+        format="json",
+    )
+    response = chat_views.ChatbotGenerateResponseView.as_view()(request, session_id="s1")
+
+    assert response.status_code == 500
+    assert response.data["error"]["code"] == "internal_failure"
+
 
 def test_model_statistics_view_requires_models_parameter() -> None:
     request = APIRequestFactory().post("/api/model_statistics/", {}, format="json")
