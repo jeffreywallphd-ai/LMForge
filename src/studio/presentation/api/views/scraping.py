@@ -1,5 +1,5 @@
 from django.views import View
-from django.http import StreamingHttpResponse, HttpRequest, HttpResponse
+from django.http import StreamingHttpResponse
 from urllib.parse import urlparse
 import time
 import re
@@ -14,7 +14,6 @@ from rest_framework import status
 import requests
 import json
 from bs4 import BeautifulSoup
-from django.shortcuts import render
 from openpyxl import load_workbook
 from io import BytesIO
 from studio.models import SourceDocument as ScrapedData  # Import the model to save data
@@ -425,10 +424,6 @@ class UploadPDFView(APIView):
             "content": scraped_record.content
         }, status=status.HTTP_200_OK)
 
-def scrape_view(request: HttpRequest) -> HttpResponse:
-    """Render the scrape view with the latest scraped data."""
-    latest: ScrapedData | None = ScrapedData.objects.order_by("-created_at").first()
-    return render(request, "scrape.html", {"latest_scraped_data": latest})
 
 
 class SaveManualTextView(APIView):

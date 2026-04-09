@@ -1,13 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from studio.presentation.api.response_contracts import error_response, success_response, validation_error_response
 from rest_framework import status
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from studio.models import Conversation
 from studio.presentation.api.serializers.conversations import ConversationSerializer
 import uuid
-from django.shortcuts import render
-from django.conf import settings
-from django.conf.urls.static import static
 import torch
 
 
@@ -82,7 +80,7 @@ class SessionCreateView(APIView):
     """
     def post(self, request):
         session_id = str(uuid.uuid4())  # Generate a new unique session_id
-        return Response({'session_id': session_id}, status=status.HTTP_201_CREATED)
+        return success_response({'session_id': session_id}, status_code=status.HTTP_201_CREATED)
 
 class SessionListView(APIView):
     """
@@ -90,7 +88,7 @@ class SessionListView(APIView):
     """
     def get(self, request):
         sessions = Conversation.objects.values_list('session_id', flat=True).distinct()
-        return Response({'sessions': list(sessions)})
+        return success_response({'sessions': list(sessions)})
     
 class ConversationListView(APIView):
     """
@@ -99,7 +97,7 @@ class ConversationListView(APIView):
     def get(self, request, session_id):
         conversations = Conversation.objects.filter(session_id=session_id).order_by('timestamp')
         serializer = ConversationSerializer(conversations, many=True)
-        return Response(serializer.data)
+        return success_response(serializer.data)
 
 class ConversationCreateView(APIView):
     """
@@ -111,12 +109,12 @@ class ConversationCreateView(APIView):
         serializer = ConversationSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response({'session_id': session_id, **serializer.data}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return success_response({'session_id': session_id, **serializer.data}, status_code=status.HTTP_201_CREATED)
+        return validation_error_response('Conversation payload is invalid.', serializer.errors)
 
 class ChatbotGenerateResponseView(APIView):
     def get(self, request):
-        return Response({'message': 'This is a GET request. Please use a POST request to generate a chatbot response.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)  
+        return error_response('This endpoint only supports POST.', status_code=status.HTTP_405_METHOD_NOT_ALLOWED, code='method_not_allowed')  
     """
     Handle POST requests to generate a chatbot response using GPT-2
     and save the chat to the database.
@@ -126,7 +124,7 @@ class ChatbotGenerateResponseView(APIView):
         user_message = request.data.get('message')
         model_name = request.data.get('model_name')
         if not user_message or not model_name:
-            return Response({'error': 'Both "message" and "model_name" are required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return validation_error_response('Both "message" and "model_name" are required.')
 
         # Extract configurable parameters from the request or set defaults
         max_length = request.data.get('max_length', 200)
@@ -146,15 +144,15 @@ class ChatbotGenerateResponseView(APIView):
             no_repeat_ngram_size = int(no_repeat_ngram_size)
             max_new_tokens = int(max_new_tokens)
         except ValueError:
-            return Response({'error': 'Invalid parameters. Ensure max_length, min_length, and top_k are integers, and top_p is a float.'}, status=status.HTTP_400_BAD_REQUEST)
+            return validation_error_response('Invalid parameters. Ensure max_length, min_length, and top_k are integers, and top_p is a float.')
 
         # Ensure proper bounds for the parameters
         if not (1 <= min_length <= max_length <= 1024):
-            return Response({'error': 'min_length must be <= max_length and within valid range.'}, status=status.HTTP_400_BAD_REQUEST)
+            return validation_error_response('min_length must be <= max_length and within valid range.')
         if not (0 <= top_p <= 1):
-            return Response({'error': 'top_p must be between 0 and 1.'}, status=status.HTTP_400_BAD_REQUEST)
+            return validation_error_response('top_p must be between 0 and 1.')
         if top_k < 0:
-            return Response({'error': 'top_k must be a non-negative integer.'}, status=status.HTTP_400_BAD_REQUEST)
+            return validation_error_response('top_k must be a non-negative integer.')
 
         # Generate response with configurable parameters
         try:
@@ -169,7 +167,7 @@ class ChatbotGenerateResponseView(APIView):
                 max_new_tokens=max_new_tokens
             )
         except Exception as e:
-            return Response({'error': f'Error during response generation: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return error_response(f'Error during response generation: {str(e)}', status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, code='generation_error')
 
 
         # Save user message to the database
@@ -193,8 +191,8 @@ class ChatbotGenerateResponseView(APIView):
         if bot_serializer.is_valid():
             bot_serializer.save()
 
-        return Response({
-            'user_message': user_message, 
+        return success_response({
+            'user_message': user_message,
             'bot_response': bot_response,
             'generation_params': {
                 'model_name': model_name,
@@ -203,9 +201,6 @@ class ChatbotGenerateResponseView(APIView):
                 'top_k': top_k,
                 'top_p': top_p,
                 'no_repeat_ngram_size': no_repeat_ngram_size,
-                'max_new_tokens': max_new_tokens
-            }
-            }, status=status.HTTP_200_OK)
-
-def chatbot_view(request):
-    return render(request, 'chatbot.html')
+                'max_new_tokens': max_new_tokens,
+            },
+        })

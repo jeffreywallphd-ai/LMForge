@@ -324,10 +324,9 @@ def train_model_view(request):
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
     
-    return render(request, "model_training.html")
+    return JsonResponse({"status": "success", "data": {"message": "Training page is web-only.", "next": "/training/"}})
 
 
-from django.shortcuts import render
 from django.http import JsonResponse
 from transformers import BertTokenizerFast, BertForQuestionAnswering, Trainer, TrainingArguments
 from datasets import load_dataset
@@ -497,10 +496,9 @@ def train_encoder_view(request):
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
 
-    return render(request, "encoder_training.html")
+    return JsonResponse({"status": "success", "data": {"message": "Encoder training page is web-only.", "next": "/training/"}})
 
 
-from django.shortcuts import render
 from django.http import JsonResponse
 import numpy as np
 from studio.presentation.api.views.evaluation import cal_sts_score
@@ -935,7 +933,7 @@ def train_model_workflow(request):
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
     
-    return render(request, "model_training_workflow.html")
+    return JsonResponse({"status": "success", "data": {"message": "Training workflow page is web-only.", "next": "/training/"}})
 
 def model_stats_workflow(prompt, model_name, top_k=50, top_p=0.95, max_new_tokens=300, no_repeat_ngrams=0, references=[]):
     device = "cuda" if torch.cuda.is_available() else "cpu"
