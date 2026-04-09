@@ -20,26 +20,29 @@ Notes:
 - Active endpoint logic is view-centric.
 - Equivalent service abstraction exists in `ChatService`.
 
-## 2) Document Ingestion Flow
+## 2) Scraping Vertical Slice (Service + API + Web)
 
 ```mermaid
 sequenceDiagram
   participant U as Client
   participant API as Scraping API View
-  participant INF as GenericWebScraper/Extractor
-  participant APP as DocumentService/Workflow
+  participant APP as ScrapingService
+  participant DOC as DocumentService
+  participant INF as GenericWebScraper/RedditScraper
   participant DB as SourceDocument
 
-  U->>API: submit URL/PDF/manual text
-  API->>INF: extract content + metadata
-  API->>APP: normalize title/content
-  APP->>DB: persist SourceDocument (optional path)
-  API-->>U: normalized content/status
+  U->>API: POST/GET /api/scrape (url,title,source_type)
+  API->>APP: validate + normalize request
+  APP->>DOC: dispatch generic/reddit scrape path
+  DOC->>INF: extract content + metadata
+  APP->>DOC: persist normalized SourceDocument
+  DOC->>DB: create SourceDocument
+  API-->>U: JSON success/error envelope
 ```
 
 Notes:
-- Scraping heuristics are concentrated in infrastructure content extraction.
-- Workflow abstraction (`DocumentIngestionWorkflow`) supports clearer orchestration.
+- `ScrapingService` is the application boundary for URL scraping concerns.
+- API and web surfaces map the same service result into different contracts (JSON vs template context).
 
 ## 3) Dataset Generation Flow
 

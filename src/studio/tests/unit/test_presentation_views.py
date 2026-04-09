@@ -7,20 +7,15 @@ import pytest
 from django.http import HttpResponse
 from django.test import RequestFactory
 
-from studio.presentation.api.views.scraping import remove_emojis
 from studio.presentation.web.views import datasets as datasets_views
 from studio.presentation.web.views import home as home_views
+from studio.presentation.web.views import scraping as scraping_views
 from studio.presentation.web.views import settings as settings_views
 
 
 @pytest.fixture
 def request_factory() -> RequestFactory:
     return RequestFactory()
-
-
-def test_remove_emojis_strips_non_bmp() -> None:
-    assert remove_emojis("Hello 😀 world 🌍") == "Hello  world "
-    assert remove_emojis(None) == ""
 
 
 def test_home_view_adds_configuration_message_when_hf_account_missing(request_factory, monkeypatch) -> None:
@@ -142,3 +137,59 @@ def test_settings_view_post_preserves_existing_values_for_blank_inputs(request_f
     written = env_path.read_text(encoding="utf-8")
     assert "HF_API_KEY=old_hf" in written
     assert "OPENAI_API_KEY=new_openai" in written
+
+
+def test_scrape_view_get_renders_latest_record(request_factory, monkeypatch) -> None:
+    request = request_factory.get("/scraping/")
+
+    fake_qs = Mock()
+    fake_qs.first.return_value = SimpleNamespace(title="Latest")
+    monkeypatch.setattr(scraping_views.ScrapedData.objects, "order_by", lambda *_a, **_k: fake_qs)
+
+    captured = {}
+
+    def fake_render(_request, _template, context):
+        captured.update(context)
+        return HttpResponse("ok")
+
+    monkeypatch.setattr(scraping_views, "render", fake_render)
+
+    response = scraping_views.scrape_view(request)
+
+    assert response.status_code == 200
+    assert captured["latest_scraped_data"].title == "Latest"
+    assert captured["scrape_result"] is None
+
+
+def test_scrape_view_post_maps_service_success_to_template_context(request_factory, monkeypatch) -> None:
+    request = request_factory.post(
+        "/scraping/",
+        data={"url": "https://example.com", "title": "Example", "source_type": "generic"},
+    )
+
+    fake_qs = Mock()
+    fake_qs.first.return_value = None
+    monkeypatch.setattr(scraping_views.ScrapedData.objects, "order_by", lambda *_a, **_k: fake_qs)
+
+    class _FakeService:
+        def execute(self, _req):
+            return SimpleNamespace(
+                ok=True,
+                data=SimpleNamespace(url="https://example.com", title="Example", file_type="html", content="Hello"),
+                error=None,
+            )
+
+    monkeypatch.setattr(scraping_views, "ScrapingService", _FakeService)
+
+    captured = {}
+    monkeypatch.setattr(
+        scraping_views,
+        "render",
+        lambda _request, _template, context: captured.update(context) or HttpResponse("ok"),
+    )
+
+    response = scraping_views.scrape_view(request)
+
+    assert response.status_code == 200
+    assert captured["scrape_result"]["url"] == "https://example.com"
+    assert captured["scrape_error"] is None
