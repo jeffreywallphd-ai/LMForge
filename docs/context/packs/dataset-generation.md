@@ -19,8 +19,9 @@
 ## Core Facts
 
 - Dataset generation pulls selected `SourceDocument` content, chunks text, prompts a language model, and parses JSON arrays of Q/A records.
-- Validation of request shape/limits is centralized in `validate_dataset_request`.
-- Workflow layer packages records and returns both JSON and CSV renderings.
+- Validation of business limits is centralized in `validate_dataset_request` and applied through `DatasetService` request normalization.
+- `DatasetService` returns a structured result contract (`ok`, normalized records, failure metadata, optional persistence handoff metadata).
+- Workflow layer adapts service output into JSON/CSV renderings for presentation use.
 - Legacy view still bundles tokenization, Qdrant interactions, and rendering in one module.
 
 ## Important Constraints

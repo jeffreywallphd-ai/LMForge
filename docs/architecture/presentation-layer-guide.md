@@ -71,6 +71,7 @@ When adding/changing presentation code:
 2. If HTML is needed, add template under `web/pages/<feature>/` and render via full namespaced path.
 3. If reusable, extract to `web/partials/<feature>/`.
 4. Keep business logic in services/workflows.
+   - Forms should perform request-bound validation and field cleanup only; dataset processing/orchestration belongs in `DatasetService`.
 5. Add or update tests for:
    - API JSON contract expectations
    - Web template rendering expectations

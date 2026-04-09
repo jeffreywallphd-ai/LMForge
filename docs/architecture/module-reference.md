@@ -41,7 +41,7 @@
 - `chat_service.py` — conversation/session operations and text generation config/validation.
 - `document_service.py` — scraping normalization and source persistence helpers.
 - `scraping_service.py` — scrape request/result contracts, input validation, and scraper orchestration shared by web/API views.
-- `dataset_service.py` — Q/A prompt construction, model invocation, JSON extraction.
+- `dataset_service.py` — framework-agnostic dataset request/result contracts, Q/A orchestration, output normalization, and optional persistence handoff metadata.
 - `training_service.py` — model-size lookup, precision/module selection, policy validation.
 - `evaluation_service.py` — metric computation pipeline and evaluation validation.
 - `vector_store_service.py` — Qdrant client abstraction and embedding storage/retrieval.

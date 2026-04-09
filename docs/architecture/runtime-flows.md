@@ -55,21 +55,30 @@ Notes:
 ```mermaid
 sequenceDiagram
   participant U as Client
-  participant API as Dataset View
+  participant P as Web/API Presentation Handler
+  participant W as DatasetGenerationWorkflow
   participant APP as DatasetService
   participant LLM as HF Model
   participant EXP as ExportService
+  participant DB as Persistence Callback (optional)
 
-  U->>API: select docs + generation params
-  API->>APP: build prompt/chunk docs
-  APP->>LLM: generate Q/A JSON-like output
-  APP-->>API: parsed records
-  API->>EXP: render JSON/CSV
-  API-->>U: dataset artifacts
+  U->>P: submit dataset params
+  P->>P: validate form/serializer shape only
+  P->>W: call generate(document_ids, questions_per_chunk, chunk_limit, instruction_prompt)
+  W->>APP: generate_dataset(DatasetGenerationRequest, persist_artifact?)
+  APP->>APP: normalize/validate business request
+  APP->>LLM: generate + parse record candidates
+  APP->>DB: optional persistence handoff callback
+  APP-->>W: DatasetGenerationResult (ok/failure + metadata)
+  W->>EXP: render JSON/CSV from records
+  W-->>P: workflow result with records + contract metadata
+  P-->>U: response mapped to HTML or JSON surface
 ```
 
 Notes:
-- Flow currently appears in both legacy-style view logic and workflow/service modules.
+- Forms handle request-bound validation; business orchestration remains in `DatasetService`.
+- Service contracts are framework-light and reusable across API/web adapters.
+- Persistence is explicit via callback handoff metadata instead of hidden view-side side effects.
 
 ## 4) Embedding + Vector Storage Flow
 
