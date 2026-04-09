@@ -296,7 +296,7 @@
 
     function redirectToChatbot() {
     let modelName = document.getElementById("model_name").value.trim();
-    let url = "/api/chatbot_view/";
+    let url = "/chat/";
 
     if (modelName) {
         url += `?model_name=${encodeURIComponent(modelName)}`;
@@ -307,7 +307,7 @@
     
     function redirectToModelStat() {
     let modelName = document.getElementById("model_name").value.trim();
-    let url = "/api/model_statistics/";
+    let url = "/evaluation/";
 
     if (modelName) {
         url += `?model_name=${encodeURIComponent(modelName)}`;

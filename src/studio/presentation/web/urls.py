@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views.chat import chatbot_view
-from .views.datasets import dataset_workflow_view
+from .views.datasets import dataset_workflow_document_processor, dataset_workflow_view
 from .views.evaluation import model_statistics_view
 from .views.home import home_view
 from .views.scraping import scrape_view
@@ -14,6 +14,7 @@ urlpatterns = [
     path('chat/', chatbot_view, name='chatbot-view'),
     path('scraping/', scrape_view, name='scrape-view'),
     path('datasets/', dataset_workflow_view, name='dataset-workflow'),
+    path('datasets/document-processor/', dataset_workflow_document_processor, name='document-processor-view'),
     path('training/', train_model_view, name='training-view'),
     path('evaluation/', model_statistics_view, name='model-statistics-view'),
 ]
