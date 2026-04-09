@@ -80,6 +80,7 @@ def test_embedding_storage_workflow_happy_paths(monkeypatch):
     assert workflow.preview_chunks(document_ids=[1], max_tokens=10) == ["c1", "c2"]
 
     result = workflow.store_document_embeddings(document_ids=[1], collection_name="col", max_tokens=10)
+    assert result.ok is True
     assert result.chunk_count == 2
     assert result.stored is True
     assert workflow.fetch_collection_chunks(collection_name="col", batch_size=7) == ["col:7"]
@@ -196,3 +197,32 @@ def test_model_training_workflow_execute_training_validation_failure():
     assert result.ok is False
     assert result.failure_kind == "validation_error"
     assert result.execution.status == "invalid_config"
+
+
+def test_embedding_storage_workflow_returns_storage_failure_when_vector_store_write_fails(monkeypatch):
+    docs = [types.SimpleNamespace(content="A")]
+
+    class _Mgr:
+        def filter(self, **_kwargs):
+            return docs
+
+    class _FailVectorSvc(_VectorSvc):
+        def store_chunks_in_qdrant(self, chunks, collection_name, client=None):
+            return False
+
+    monkeypatch.setattr("studio.application.workflows.embedding_storage.SourceDocument.objects", _Mgr())
+
+    workflow = EmbeddingStorageWorkflow(document_service=_DocSvc(), vector_store_service=_FailVectorSvc())
+    result = workflow.run(
+        request=types.SimpleNamespace(
+            document_ids=[1],
+            collection_name="col",
+            max_tokens=10,
+            host="localhost",
+            port=6333,
+        )
+    )
+
+    assert result.ok is False
+    assert result.failure is not None
+    assert result.failure.code == "storage_failure"

@@ -24,7 +24,7 @@
 - `DatasetService` owns low-level generation mechanics (prompt assembly, model call, parse/normalize, request policy validation).
 - `DatasetGenerationWorkflow` owns orchestration and caller contracts: `run(request)` returns normalized `ok/failure` result semantics and export renderings.
 - `DatasetGenerationWorkflow.generate(...)` remains as a compatibility wrapper and delegates to `run(...)`.
-- Legacy view still bundles tokenization, Qdrant interactions, and rendering in one module.
+- Embedding storage orchestration is handled separately by `EmbeddingStorageWorkflow`; dataset handlers should not inline Qdrant chunk-storage orchestration.
 
 ## Important Constraints
 

@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views.chat import ChatbotGenerateResponseView, ConversationCreateView, ConversationListView, SessionCreateView, SessionListView
+from .views.datasets import database_workflow
 from .views.evaluation import ModelStatisticsView
 from .views.scraping import SaveManualTextView, ScrapeDataView, UploadPDFView
 from .views.training import (
@@ -21,6 +22,7 @@ urlpatterns = [
     path("scrape/", ScrapeDataView.as_view(), name="scrape-data"),
     path("upload_pdf/", UploadPDFView.as_view(), name="upload-pdf"),
     path("save_manual_text/", SaveManualTextView.as_view(), name="save-manual-text"),
+    path("database_workflow/", database_workflow, name="database-workflow"),
     path("train_model/", train_model_view, name="train-view"),
     path("train_encoder/", train_encoder_view, name="train-encoder"),
     path("stream-training/", stream_training_output, name="stream-training"),
