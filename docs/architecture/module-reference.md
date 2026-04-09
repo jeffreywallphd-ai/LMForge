@@ -29,7 +29,10 @@
 - `src/studio/presentation/web/urls.py`
 - `src/studio/presentation/web/views/*`
 - `src/studio/presentation/web/forms/*`
-- `src/studio/presentation/web/templates/*`
+- `src/studio/presentation/web/templates/web/layouts/*`
+- `src/studio/presentation/web/templates/web/pages/*`
+- `src/studio/presentation/web/templates/web/partials/*`
+- `src/studio/presentation/web/static/web/*`
 
 ## Application Modules
 

@@ -93,4 +93,5 @@ A detailed inventory of current API/web presentation boundary violations and mig
 - `docs/architecture/presentation-boundary-audit.md`
 - `docs/architecture/api-response-contracts.md`
 
-Use these documents as the source of truth for Story 2.1 boundary refactors and response contract consistency.
+Use these documents as the source of truth for Story 2 presentation refactors and response/template/static contract consistency.
+- `docs/architecture/presentation-layer-guide.md`

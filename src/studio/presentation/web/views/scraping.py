@@ -35,4 +35,4 @@ def scrape_view(request):
         elif service_result.error:
             context["scrape_error"] = service_result.error.message
 
-    return render(request, "scrape.html", context)
+    return render(request, "web/pages/scraping/scrape.html", context)

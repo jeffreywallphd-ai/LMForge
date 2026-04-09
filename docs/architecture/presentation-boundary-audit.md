@@ -127,3 +127,17 @@ Recent refactor changes align active handlers to clearer presentation contracts:
 - `presentation/api/views/scraping.py` exposes a dedicated JSON-only scrape endpoint contract.
 - `presentation/web/views/scraping.py` provides a browser-oriented template flow that maps service outcomes to user-facing context.
 - Scraping contracts are now explicit (`ScrapeRequest`, `ScrapeResult`) instead of ad hoc dictionaries in view handlers.
+
+## Story 2.3 Update: Template/Static Normalization + Regression Coverage
+
+Completed hardening work for the presentation split now includes:
+
+- Namespaced web template paths under `web/layouts`, `web/pages`, and `web/partials`.
+- Namespaced static assets under `web/css/*` with normalized `{% static 'web/...` %}` references.
+- Removal of ambiguous duplicate partial usage (`processor_reddit.html`) in favor of shared `input_url.html` partial behavior.
+- Regression tests that guard:
+  - API scraping surface remains JSON-oriented.
+  - Web scraping surface remains template-oriented.
+  - Web page templates stay under `web/pages/*` and extend `web/layouts/base.html`.
+
+Refer to `docs/architecture/presentation-layer-guide.md` for forward-looking contributor rules.

@@ -1,5 +1,4 @@
 from django.shortcuts import render
-from django.http import JsonResponse
 import os
 from django.conf import settings
 
@@ -41,9 +40,7 @@ def settings_view(request):
             message = f"Failed to update .env file: {e}"
             message_type = "error"
 
-    # Ensure form fields get correct values
-    print(existing_values)
-    return render(request, 'settings.html', {
+    return render(request, 'web/pages/settings/settings.html', {
         "existing_values": existing_values,  # Pass loaded values to template
         "message": message,
         "message_type": message_type
