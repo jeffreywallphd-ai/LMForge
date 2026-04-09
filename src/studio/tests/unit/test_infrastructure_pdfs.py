@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.studio.infrastructure.scraping.pdfs import convert_pdf_text, extract_pdf_text
+from studio.infrastructure.scraping.pdfs import convert_pdf_text, extract_pdf_text
 
 
 class _FakePdf:
@@ -24,7 +24,7 @@ class _FakePage:
 
 def test_extract_pdf_text_collects_non_empty_pages(monkeypatch):
     fake_pdf = _FakePdf([_FakePage("page one"), _FakePage(None), _FakePage("page three")])
-    monkeypatch.setattr("src.studio.infrastructure.scraping.pdfs.pdfplumber.open", lambda _file: fake_pdf)
+    monkeypatch.setattr("studio.infrastructure.scraping.pdfs.pdfplumber.open", lambda _file: fake_pdf)
 
     text = extract_pdf_text(SimpleNamespace(name="any.pdf"))
 

@@ -17,7 +17,7 @@
 
 ## Core Facts
 
-- Django settings default to `src.config.settings.development` via `manage.py`.
+- Django settings default to `config.settings.development` via `manage.py`.
 - The project supports MySQL by default, but uses SQLite fallback in debug mode when DB env vars are missing and server/migrate commands run.
 - Root URL configuration mounts both API (`/api/`) and web routes (`/`).
 - `src/studio/models.py` re-exports domain models for Django app compatibility.

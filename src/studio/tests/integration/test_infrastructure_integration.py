@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
 
-from src.studio.infrastructure.scraping.generic_web import GenericWebScraper
-from src.studio.infrastructure.scraping.reddit import RedditScraper
-from src.studio.infrastructure.storage.exports import export_records_json
-from src.studio.infrastructure.storage.files import write_text
+from studio.infrastructure.scraping.generic_web import GenericWebScraper
+from studio.infrastructure.scraping.reddit import RedditScraper
+from studio.infrastructure.storage.exports import export_records_json
+from studio.infrastructure.storage.files import write_text
 
 
 class _FakeResponse:
@@ -25,7 +25,7 @@ def test_generic_web_to_export_to_file_pipeline(monkeypatch, tmp_path: Path):
     html = b"<html><head><title>Pipeline</title></head><body><main><p>Pipeline body</p></main></body></html>"
 
     monkeypatch.setattr(
-        "src.studio.infrastructure.scraping.generic_web.requests.get",
+        "studio.infrastructure.scraping.generic_web.requests.get",
         lambda *_a, **_k: _FakeResponse(headers={"content-type": "text/html"}, content=html),
     )
 
@@ -66,8 +66,8 @@ def test_reddit_subreddit_scrape_collects_unique_posts(monkeypatch):
         call_index["i"] += 1
         return _FakeResponse(json_data=post_payload)
 
-    monkeypatch.setattr("src.studio.infrastructure.scraping.reddit.requests.get", _fake_get)
-    monkeypatch.setattr("src.studio.infrastructure.scraping.reddit.time.sleep", lambda *_a, **_k: None)
+    monkeypatch.setattr("studio.infrastructure.scraping.reddit.requests.get", _fake_get)
+    monkeypatch.setattr("studio.infrastructure.scraping.reddit.time.sleep", lambda *_a, **_k: None)
 
     result = scraper.scrape("https://www.reddit.com/r/test", delay_seconds=0)
 

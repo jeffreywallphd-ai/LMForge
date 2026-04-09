@@ -5,8 +5,8 @@ from unittest.mock import Mock
 
 from rest_framework.test import APIRequestFactory
 
-from src.studio.presentation.api.views import chat as chat_views
-from src.studio.presentation.api.views import evaluation as evaluation_views
+from studio.presentation.api.views import chat as chat_views
+from studio.presentation.api.views import evaluation as evaluation_views
 
 
 def test_session_create_view_generates_uuid(monkeypatch) -> None:

@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from src.studio.models import SourceDocument as ScrapedData
+from studio.models import SourceDocument as ScrapedData
 from django.http import JsonResponse
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModelForCausalLM

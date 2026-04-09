@@ -5,7 +5,7 @@ from __future__ import annotations
 from django import forms
 from django.db.models import TextChoices
 
-from src.studio.domain.models.source_documents import SourceDocument
+from studio.domain.models.source_documents import SourceDocument
 
 
 class SourceDocumentForm(forms.ModelForm):

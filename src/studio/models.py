@@ -4,11 +4,11 @@ Models are implemented in ``studio.domain.models`` to keep domain concerns separ
 from presentation and infrastructure layers.
 """
 
-from src.studio.domain.models.conversations import Conversation
-from src.studio.domain.models.dataset_artifacts import Answer, DatasetArtifact, Question, ReviewAnswer, Reviewer
-from src.studio.domain.models.model_stats import ModelStats
-from src.studio.domain.models.processed_documents import License, ProcessedDocument, Source
-from src.studio.domain.models.source_documents import SourceDocument, SourceDocumentMetadata
+from studio.domain.models.conversations import Conversation
+from studio.domain.models.dataset_artifacts import Answer, DatasetArtifact, Question, ReviewAnswer, Reviewer
+from studio.domain.models.model_stats import ModelStats
+from studio.domain.models.processed_documents import License, ProcessedDocument, Source
+from studio.domain.models.source_documents import SourceDocument, SourceDocumentMetadata
 
 __all__ = [
     "Answer",

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from src.studio.presentation.web.forms.documents import DocumentProcessingForm, SourceDocumentForm
-from src.studio.presentation.web.forms.evaluation import EvaluationRunForm
-from src.studio.presentation.web.forms.training import TrainingRunForm
+from studio.presentation.web.forms.documents import DocumentProcessingForm, SourceDocumentForm
+from studio.presentation.web.forms.evaluation import EvaluationRunForm
+from studio.presentation.web.forms.training import TrainingRunForm
 
 
 def test_source_document_form_requires_pdf_or_content() -> None:

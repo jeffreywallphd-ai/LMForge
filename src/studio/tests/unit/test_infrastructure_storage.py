@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from src.studio.infrastructure.storage.exports import export_records_csv, export_records_json
-from src.studio.infrastructure.storage.files import ensure_parent_dir, sanitize_filename, write_bytes, write_text
+from studio.infrastructure.storage.exports import export_records_csv, export_records_json
+from studio.infrastructure.storage.files import ensure_parent_dir, sanitize_filename, write_bytes, write_text
 
 
 def test_sanitize_filename_replaces_unsafe_chars_and_falls_back():

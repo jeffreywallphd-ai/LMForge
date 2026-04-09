@@ -1,6 +1,6 @@
 import pytest
 
-from src.studio.application.services.chat_service import ChatGenerationConfig
+from studio.application.services.chat_service import ChatGenerationConfig
 
 
 def test_chat_generation_config_validate_success():

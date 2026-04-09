@@ -1,7 +1,7 @@
 import pytest
 
-from src.studio.application.services.evaluation_service import EvaluationService
-from src.studio.domain.models.evaluation_runs import EvaluationRun
+from studio.application.services.evaluation_service import EvaluationService
+from studio.domain.models.evaluation_runs import EvaluationRun
 
 
 def test_validate_constraints_delegates(monkeypatch):
@@ -11,7 +11,7 @@ def test_validate_constraints_delegates(monkeypatch):
     def _validate(config):
         called["name"] = config.model_name
 
-    monkeypatch.setattr("src.studio.application.services.evaluation_service.validate_evaluation_run", _validate)
+    monkeypatch.setattr("studio.application.services.evaluation_service.validate_evaluation_run", _validate)
     service.validate_constraints(EvaluationRun(model_name="gpt2"))
     assert called == {"name": "gpt2"}
 

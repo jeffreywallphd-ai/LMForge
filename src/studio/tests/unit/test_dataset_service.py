@@ -1,6 +1,6 @@
 import pytest
 
-from src.studio.application.services.dataset_service import DatasetGenerationRequest, DatasetService
+from studio.application.services.dataset_service import DatasetGenerationRequest, DatasetService
 
 
 class _DocSvc:
@@ -18,7 +18,7 @@ def test_build_prompt_includes_instruction_when_present():
 def test_get_documents_text_joins_content(monkeypatch):
     docs = [type("D", (), {"content": "A"})(), type("D", (), {"content": "B"})()]
     monkeypatch.setattr(
-        "src.studio.application.services.dataset_service.SourceDocument.objects.filter",
+        "studio.application.services.dataset_service.SourceDocument.objects.filter",
         lambda **_kwargs: docs,
     )
 

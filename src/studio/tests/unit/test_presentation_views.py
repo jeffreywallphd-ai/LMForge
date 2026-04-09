@@ -8,10 +8,10 @@ import pytest
 from django.http import HttpResponse
 from django.test import RequestFactory
 
-from src.studio.presentation.api.views.scraping import remove_emojis
-from src.studio.presentation.web.views import datasets as datasets_views
-from src.studio.presentation.web.views import home as home_views
-from src.studio.presentation.web.views import settings as settings_views
+from studio.presentation.api.views.scraping import remove_emojis
+from studio.presentation.web.views import datasets as datasets_views
+from studio.presentation.web.views import home as home_views
+from studio.presentation.web.views import settings as settings_views
 
 
 @pytest.fixture

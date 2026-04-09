@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 import uuid
 
-from src.studio.domain.models.conversations import Conversation
+from studio.domain.models.conversations import Conversation
 
 
 @dataclass(slots=True)

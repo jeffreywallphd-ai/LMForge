@@ -5,23 +5,23 @@ from datetime import date, datetime
 import pytest
 from django.core.exceptions import ValidationError
 
-from src.studio.domain.models.conversations import Conversation
-from src.studio.domain.models.dataset_artifacts import (
+from studio.domain.models.conversations import Conversation
+from studio.domain.models.dataset_artifacts import (
     Answer,
     DatasetArtifact,
     Question,
     ReviewAnswer,
     Reviewer,
 )
-from src.studio.domain.models.evaluation_runs import EvaluationRun
-from src.studio.domain.models.model_stats import ModelStats
-from src.studio.domain.models.processed_documents import License, ProcessedDocument, Source, ValidityLevel
-from src.studio.domain.models.source_documents import SourceDocument, SourceDocumentMetadata
-from src.studio.domain.models.training_runs import TrainingRun
-from src.studio.domain.models.vector_collections import VectorCollection
-from src.studio.domain.policies.dataset_rules import validate_dataset_request
-from src.studio.domain.policies.evaluation_rules import validate_evaluation_run
-from src.studio.domain.policies.training_rules import validate_training_run
+from studio.domain.models.evaluation_runs import EvaluationRun
+from studio.domain.models.model_stats import ModelStats
+from studio.domain.models.processed_documents import License, ProcessedDocument, Source, ValidityLevel
+from studio.domain.models.source_documents import SourceDocument, SourceDocumentMetadata
+from studio.domain.models.training_runs import TrainingRun
+from studio.domain.models.vector_collections import VectorCollection
+from studio.domain.policies.dataset_rules import validate_dataset_request
+from studio.domain.policies.evaluation_rules import validate_evaluation_run
+from studio.domain.policies.training_rules import validate_training_run
 
 
 @pytest.mark.parametrize(

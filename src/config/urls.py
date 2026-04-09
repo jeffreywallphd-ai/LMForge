@@ -6,8 +6,8 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('src.studio.presentation.api.urls')),
-    path('', include('src.studio.presentation.web.urls')),
+    path('api/', include('studio.presentation.api.urls')),
+    path('', include('studio.presentation.web.urls')),
     path('', lambda request: redirect('/home/', permanent=False)),
 ]
 
