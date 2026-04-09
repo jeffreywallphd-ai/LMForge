@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.shortcuts import render
 
-from studio.application.services.training_service import TrainingService
+from studio.application.workflows.model_training import ModelTrainingWorkflow
 from studio.application.workflows.training_adapters import InMemoryTrainingResultStore, LocalTrainingExecutor
 
 
@@ -13,7 +13,7 @@ def train_model_view(request):
     }
 
     if request.method == "POST":
-        result = TrainingService().orchestrate_training(
+        result = ModelTrainingWorkflow().execute_training(
             request.POST.dict(),
             executor=LocalTrainingExecutor(),
             result_store=InMemoryTrainingResultStore(),

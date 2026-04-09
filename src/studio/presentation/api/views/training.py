@@ -10,13 +10,12 @@ from dataclasses import asdict
 
 from django.http import JsonResponse, StreamingHttpResponse
 
-from studio.application.services.training_service import TrainingService
 from studio.application.workflows.model_training import ModelTrainingWorkflow
 from studio.application.workflows.training_adapters import InMemoryTrainingResultStore, LocalTrainingExecutor
 
 
-def get_training_service() -> TrainingService:
-    return TrainingService()
+def get_training_workflow() -> ModelTrainingWorkflow:
+    return ModelTrainingWorkflow()
 
 
 def _status_for_orchestration(result) -> int:
@@ -45,7 +44,7 @@ def train_model_view(request):
     if request.method != "POST":
         return JsonResponse({"status": "success", "data": {"message": "Training page is web-only.", "next": "/training/"}})
 
-    result = get_training_service().orchestrate_training(
+    result = get_training_workflow().execute_training(
         request.POST.dict(),
         executor=LocalTrainingExecutor(),
         result_store=InMemoryTrainingResultStore(),
@@ -73,7 +72,7 @@ def train_model_workflow(request):
     if request.method != "POST":
         return JsonResponse({"status": "success", "data": {"message": "Training workflow page is web-only.", "next": "/training/"}})
 
-    plan = ModelTrainingWorkflow().prepare_training_outcome(request.POST.dict())
+    plan = get_training_workflow().prepare_training_outcome(request.POST.dict())
     if not plan.ok:
         return JsonResponse(
             {

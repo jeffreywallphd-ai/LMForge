@@ -14,6 +14,7 @@
 - `src/studio/models.py`
 - `src/studio/presentation/api/urls.py`
 - `src/studio/presentation/web/urls.py`
+- `docs/context/workflow-conventions.md`
 
 ## Core Facts
 
@@ -27,6 +28,7 @@
 ## Architectural Direction
 
 - Keep new business logic in `application/services` and `application/workflows`.
+- Treat `docs/context/workflow-conventions.md` as the workflow boundary contract when adding orchestration logic.
 - Keep domain rules in `domain/policies`.
 - Use infrastructure modules for external integrations (scraping, vector store, storage).
 

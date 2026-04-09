@@ -150,60 +150,24 @@ class TrainingService:
         result_store: TrainingResultStore | None = None,
         hf_token: str = "",
     ) -> TrainingOrchestrationResult:
-        """Run explicit lifecycle: assemble config -> prepare/validate -> execute -> persist."""
+        """Backward-compatible shim that delegates orchestration to the workflow layer."""
 
-        config = self.assemble_config(payload)
+        from studio.application.workflows.model_training import ModelTrainingWorkflow
 
-        failure_kind: str | None = None
-        try:
-            model_size, resolved_precision, target_modules = self.prepare_training(config, hf_token=hf_token)
-        except ValueError as exc:
-            model_size = 0
-            resolved_precision = "unknown"
-            target_modules = []
-            execution = TrainingExecutionResult(
-                ok=False,
-                status="invalid_config",
-                detail=str(exc),
-                metadata={},
-            )
-            failure_kind = "validation_error"
-        else:
-            try:
-                execution = executor.execute(
-                    config=config,
-                    precision=resolved_precision,
-                    target_modules=target_modules,
-                )
-                if not execution.ok:
-                    failure_kind = "execution_error"
-            except Exception as exc:  # pragma: no cover - classification path tested by assertion on returned result
-                execution = TrainingExecutionResult(
-                    ok=False,
-                    status="failed",
-                    detail=str(exc),
-                    metadata={},
-                )
-                failure_kind = "execution_exception"
-
-        persisted_record: dict[str, Any] | None = None
-        if result_store is not None:
-            persisted_record = result_store.save(
-                config=config,
-                model_size=model_size,
-                precision=resolved_precision,
-                target_modules=target_modules,
-                execution=execution,
-                failure_kind=failure_kind,
-            )
+        result = ModelTrainingWorkflow(training_service=self).execute_training(
+            payload,
+            executor=executor,
+            result_store=result_store,
+            hf_token=hf_token,
+        )
 
         return TrainingOrchestrationResult(
-            ok=execution.ok,
-            config=config,
-            model_size=model_size,
-            resolved_precision=resolved_precision,
-            target_modules=target_modules,
-            execution=execution,
-            persisted_record=persisted_record,
-            failure_kind=failure_kind,
+            ok=result.ok,
+            config=result.config,
+            model_size=result.model_size,
+            resolved_precision=result.resolved_precision,
+            target_modules=result.target_modules,
+            execution=result.execution,
+            persisted_record=result.persisted_record,
+            failure_kind=result.failure_kind,
         )
