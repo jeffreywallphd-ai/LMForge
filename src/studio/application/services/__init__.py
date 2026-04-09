@@ -5,6 +5,7 @@ from .dataset_service import DatasetGenerationRequest, DatasetService
 from .document_service import DocumentService, ScrapedPayload
 from .evaluation_service import EvaluationConfig, EvaluationService
 from .export_service import ExportService
+from .scraping_service import ScrapeRequest, ScrapeResult, ScrapingService
 from .training_service import TrainingConfig, TrainingService
 from .vector_store_service import VectorStoreService
 
@@ -18,6 +19,9 @@ __all__ = [
     "EvaluationConfig",
     "EvaluationService",
     "ExportService",
+    "ScrapeRequest",
+    "ScrapeResult",
+    "ScrapingService",
     "TrainingConfig",
     "TrainingService",
     "VectorStoreService",

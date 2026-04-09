@@ -43,6 +43,7 @@ Handles HTTP concerns, serializers, and templates.
 Defines reusable use-case logic.
 
 - Services encapsulate focused operations (chat generation, dataset generation, training/eval validation, export, vector store operations, document processing).
+- Scraping now uses an explicit service contract (`ScrapingService`) consumed by both API and web handlers.
 - Workflows orchestrate end-to-end operations (document ingestion, dataset generation, embedding storage, training prep, evaluation runs).
 - Current state: abstractions exist but are only partially adopted by presentation views.
 

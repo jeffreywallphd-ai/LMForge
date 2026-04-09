@@ -120,3 +120,10 @@ Recent refactor changes align active handlers to clearer presentation contracts:
 - Web views no longer import API view handlers directly.
 - Web handlers were reduced to browser-oriented template rendering flows.
 - Standard API response envelope guidance now lives in `docs/architecture/api-response-contracts.md`.
+
+## Story 2.2 Scraping Slice Update
+
+- URL scraping business logic now routes through `ScrapingService` in the application layer.
+- `presentation/api/views/scraping.py` exposes a dedicated JSON-only scrape endpoint contract.
+- `presentation/web/views/scraping.py` provides a browser-oriented template flow that maps service outcomes to user-facing context.
+- Scraping contracts are now explicit (`ScrapeRequest`, `ScrapeResult`) instead of ad hoc dictionaries in view handlers.
