@@ -15,6 +15,17 @@ class TrainingWorkflowPlan:
     target_modules: list[str]
 
 
+@dataclass(slots=True)
+class TrainingWorkflowOutcome:
+    ok: bool
+    config: TrainingConfig | None = None
+    model_size: int | None = None
+    resolved_precision: str | None = None
+    target_modules: list[str] | None = None
+    failure_kind: str | None = None
+    error_message: str | None = None
+
+
 class ModelTrainingWorkflow:
     """Coordinates model training setup/validation before execution."""
 
@@ -33,4 +44,22 @@ class ModelTrainingWorkflow:
             model_size=model_size,
             resolved_precision=precision_name,
             target_modules=target_modules,
+        )
+
+    def prepare_training_outcome(self, payload: dict, *, hf_token: str = "") -> TrainingWorkflowOutcome:
+        try:
+            plan = self.prepare_training(payload, hf_token=hf_token)
+        except ValueError as exc:
+            return TrainingWorkflowOutcome(
+                ok=False,
+                failure_kind="validation_error",
+                error_message=str(exc),
+            )
+
+        return TrainingWorkflowOutcome(
+            ok=True,
+            config=plan.config,
+            model_size=plan.model_size,
+            resolved_precision=plan.resolved_precision,
+            target_modules=plan.target_modules,
         )

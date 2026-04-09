@@ -17,8 +17,9 @@
 
 - `TrainingRun` is a dataclass-based config object used in service/workflow layers.
 - `TrainingService` assembles normalized training configs, resolves model size/precision/modules, orchestrates execution handoff, and coordinates explicit persistence handoff.
+- `ModelTrainingWorkflow` provides plan-oriented helpers (`prepare_training`) and normalized workflow outcomes (`prepare_training_outcome`) for presentation adapters.
+- Training API/web views are thin adapters: they parse request inputs, invoke service/workflow contracts, and map normalized outcomes to JSON/template contracts.
 - Policy validation enforces safe parameter ranges and feature constraints based on model size.
-- Training views currently remain large and procedural, but workflow abstraction exists for cleaner orchestration.
 
 ## Important Constraints
 

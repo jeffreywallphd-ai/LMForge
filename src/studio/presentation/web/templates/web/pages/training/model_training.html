@@ -18,6 +18,13 @@
 </head>
 
 <h1>Configure Model Training</h1>
+
+{% if training_error %}
+<div class="alert alert-danger">{{ training_error }}</div>
+{% endif %}
+{% if training_result %}
+<div class="alert alert-success">{{ training_result.detail }}</div>
+{% endif %}
 <div class="radio-group">
     <input type="radio" id="decoder" name="enc_dec" value="Decoder" checked>
     <label for="decoder">Decoder</label>
