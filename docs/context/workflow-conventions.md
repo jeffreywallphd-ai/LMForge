@@ -48,5 +48,6 @@ Workflows should call services for low-level operations and optionally call infr
 
 - Dataset generation orchestration: `DatasetGenerationWorkflow.run(...)`
 - Training pipeline orchestration: `ModelTrainingWorkflow.execute_training(...)`
+- Embedding storage orchestration: `EmbeddingStorageWorkflow.run(...)`
 
-Both are designed to keep orchestration out of views and out of low-level services.
+All three keep orchestration in workflows while services retain single-responsibility behavior.

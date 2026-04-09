@@ -12,6 +12,8 @@ from studio.application.workflows.document_ingestion import (
 from studio.application.workflows.embedding_storage import (
     EmbeddingStorageResult,
     EmbeddingStorageWorkflow,
+    EmbeddingStorageWorkflowFailure,
+    EmbeddingStorageWorkflowRequest,
 )
 from studio.application.workflows.model_evaluation import (
     ModelEvaluationWorkflow,
@@ -31,6 +33,8 @@ __all__ = [
     "DocumentIngestionWorkflow",
     "EmbeddingStorageResult",
     "EmbeddingStorageWorkflow",
+    "EmbeddingStorageWorkflowFailure",
+    "EmbeddingStorageWorkflowRequest",
     "ModelEvaluationWorkflow",
     "ModelEvaluationWorkflowRequest",
     "ModelTrainingWorkflow",
