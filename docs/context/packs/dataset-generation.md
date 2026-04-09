@@ -16,6 +16,7 @@
 - `src/studio/domain/models/dataset_artifacts.py`
 - `src/studio/domain/models/source_documents.py`
 - `docs/context/workflow-conventions.md`
+- `docs/context/service-testing-conventions.md`
 
 ## Core Facts
 

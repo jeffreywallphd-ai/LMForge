@@ -16,6 +16,7 @@
 - `src/studio/application/services/scraping_service.py`
 - `src/studio/application/workflows/document_ingestion.py`
 - `src/studio/domain/models/source_documents.py`
+- `docs/context/service-testing-conventions.md`
 
 ## Core Facts
 
