@@ -16,7 +16,7 @@
 ## Core Facts
 
 - `TrainingRun` is a dataclass-based config object used in service/workflow layers.
-- `TrainingService` resolves model size, target modules, and precision mode (fp16/bf16/QLoRA).
+- `TrainingService` assembles normalized training configs, resolves model size/precision/modules, orchestrates execution handoff, and coordinates explicit persistence handoff.
 - Policy validation enforces safe parameter ranges and feature constraints based on model size.
 - Training views currently remain large and procedural, but workflow abstraction exists for cleaner orchestration.
 
@@ -24,3 +24,5 @@
 
 - Respect precision compatibility toggles (`use_qlora`, `fp16`, `bf16`).
 - Keep low-memory pathways available for large models.
+
+- Training lifecycle boundary: config assembly -> execution collaborator -> persistence collaborator.
