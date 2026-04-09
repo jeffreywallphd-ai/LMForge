@@ -142,27 +142,39 @@ class DatasetService:
         records: list[dict[str, Any]] = []
         processed_chunk_count = 0
 
-        for chunk in chunks[: normalized_request.chunk_limit]:
-            output = self._model_chat(
-                self.build_prompt(chunk, normalized_request.questions_per_chunk, normalized_request.instruction_prompt),
-                model_name=model_name,
+        try:
+            for chunk in chunks[: normalized_request.chunk_limit]:
+                output = self._model_chat(
+                    self.build_prompt(chunk, normalized_request.questions_per_chunk, normalized_request.instruction_prompt),
+                    model_name=model_name,
+                )
+                match = self._JSON_ARRAY_PATTERN.search(output)
+                if not match:
+                    continue
+                processed_chunk_count += 1
+                try:
+                    parsed = json.loads(match.group(0))
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(parsed, list):
+                    records.extend(parsed)
+        except Exception as exc:  # noqa: BLE001
+            return DatasetGenerationResult(
+                ok=False,
+                failure=DatasetGenerationFailure(code="execution_error", message=str(exc)),
             )
-            match = self._JSON_ARRAY_PATTERN.search(output)
-            if not match:
-                continue
-            processed_chunk_count += 1
-            try:
-                parsed = json.loads(match.group(0))
-            except json.JSONDecodeError:
-                continue
-            if isinstance(parsed, list):
-                records.extend(parsed)
 
         normalized_records = self._normalize_records(records)
 
         persisted_artifact = None
         if persist_artifact is not None:
-            persisted_artifact = persist_artifact(normalized_records, normalized_request) or None
+            try:
+                persisted_artifact = persist_artifact(normalized_records, normalized_request) or None
+            except Exception as exc:  # noqa: BLE001
+                return DatasetGenerationResult(
+                    ok=False,
+                    failure=DatasetGenerationFailure(code="persistence_error", message=str(exc)),
+                )
 
         return DatasetGenerationResult(
             ok=True,

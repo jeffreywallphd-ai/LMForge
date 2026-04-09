@@ -11,6 +11,7 @@
 - `src/studio/presentation/api/serializers/conversations.py`
 - `src/studio/domain/models/conversations.py`
 - `src/studio/application/services/chat_service.py`
+- `docs/context/service-testing-conventions.md`
 
 ## Core Facts
 
