@@ -16,10 +16,14 @@
 
 - API exposes session create/list, message list/create, and generate-response endpoints.
 - Conversation persistence uses Django model `Conversation` with `session_id`, message body, and user/bot flag.
-- `ChatService` mirrors much of view-level generation logic and introduces configurable generation object (`ChatGenerationConfig`).
-- There is active coexistence of legacy-style direct view logic and newer service abstraction.
+- `ChatService` is the single boundary for chat turn validation, model/session acquisition, generation, and conversation persistence.
+- `ChatModelSessionProvider` owns model/tokenizer loading and in-memory reuse by `model_name`, so API views no longer instantiate/loading models directly.
+- API chat views map typed service outcomes (`invalid_input`, `model_session_unavailable`, `execution_failure`, `internal_failure`) to HTTP status codes without duplicating business validation.
 
 ## Important Constraints
 
-- Parameter validation must enforce bounds for min/max length, `top_p`, and `top_k`.
-- Generation logic caches model/tokenizer in-memory per model name.
+- Parameter validation for message payload and generation bounds is centralized in `ChatService.parse_turn_request(...)` / `ChatGenerationConfig.validate()`.
+- Model/session lifecycle:
+  - Created on first request per `model_name` inside `ChatModelSessionProvider.get_model_session(...)`.
+  - Reused from provider cache for subsequent requests in the same process.
+  - Loader failures raise `ModelSessionUnavailableError`; generation-time failures raise `ChatExecutionError`.

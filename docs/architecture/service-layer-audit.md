@@ -157,6 +157,8 @@ Conventions:
 ## Migration Checklist (Incremental)
 
 - [x] Chat API handlers delegate business logic to `ChatService`.
+- [x] Chat model/session loading centralized behind `ChatModelSessionProvider` and reused via a single service access path.
+- [x] Chat validation/error categories centralized in service layer with typed outcomes mapped by views.
 - [ ] Extract PDF/manual text save behavior from scraping API views into service/workflow contracts.
 - [ ] Route dataset collection/chunk orchestration through `EmbeddingStorageWorkflow` from views.
 - [ ] Move training orchestration out of API view into `ModelTrainingWorkflow` plus service contracts.

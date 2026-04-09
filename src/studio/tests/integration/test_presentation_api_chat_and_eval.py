@@ -4,6 +4,10 @@ from types import SimpleNamespace
 
 from rest_framework.test import APIRequestFactory
 
+from studio.application.services.chat_service import (
+    ChatExecutionError,
+    ModelSessionUnavailableError,
+)
 from studio.presentation.api.views import chat as chat_views
 from studio.presentation.api.views import evaluation as evaluation_views
 
@@ -22,15 +26,23 @@ class _FakeChatService:
         assert session_id == "s1"
         return [SimpleNamespace(message="Hi", is_user=True)]
 
-    def generate_response(self, _prompt: str, _cfg) -> str:
-        return "Stubbed reply"
+    def run_chat_turn(self, *, session_id: str, payload):
+        user_message = payload["message"]
+        bot_response = "Stubbed reply"
+        self.save_message(session_id=session_id, message=user_message, is_user=True)
+        self.save_message(session_id=session_id, message=bot_response, is_user=False)
+        return SimpleNamespace(
+            user_message=user_message,
+            bot_response=bot_response,
+            generation_params={"model_name": payload.get("model_name", "")},
+        )
 
     def save_message(self, *, session_id: str, message: str, is_user: bool):
         self.saved_messages.append((session_id, message, is_user))
 
 
 def test_session_create_view_generates_uuid_via_chat_service(monkeypatch) -> None:
-    monkeypatch.setattr(chat_views, "ChatService", _FakeChatService)
+    monkeypatch.setattr(chat_views, "get_chat_service", lambda: _FakeChatService())
     request = APIRequestFactory().post("/api/chatbot/", data={})
 
     response = chat_views.SessionCreateView.as_view()(request)
@@ -41,7 +53,7 @@ def test_session_create_view_generates_uuid_via_chat_service(monkeypatch) -> Non
 
 
 def test_session_and_conversation_list_views_use_chat_service(monkeypatch) -> None:
-    monkeypatch.setattr(chat_views, "ChatService", _FakeChatService)
+    monkeypatch.setattr(chat_views, "get_chat_service", lambda: _FakeChatService())
 
     class _Serializer:
         def __init__(self, _conversations, many: bool):
@@ -97,7 +109,7 @@ def test_chatbot_generate_response_rejects_invalid_generation_bounds() -> None:
 
 def test_chatbot_generate_response_saves_user_and_bot_messages(monkeypatch) -> None:
     fake_service = _FakeChatService()
-    monkeypatch.setattr(chat_views, "ChatService", lambda: fake_service)
+    monkeypatch.setattr(chat_views, "get_chat_service", lambda: fake_service)
 
     request = APIRequestFactory().post(
         "/api/chatbot/s1/response/",
@@ -113,6 +125,42 @@ def test_chatbot_generate_response_saves_user_and_bot_messages(monkeypatch) -> N
     assert fake_service.saved_messages[0][2] is True
     assert fake_service.saved_messages[1][2] is False
 
+
+
+def test_chatbot_generate_response_maps_model_session_errors(monkeypatch) -> None:
+    class _UnavailableService(_FakeChatService):
+        def run_chat_turn(self, *, session_id: str, payload):
+            raise ModelSessionUnavailableError("model not available")
+
+    monkeypatch.setattr(chat_views, "get_chat_service", lambda: _UnavailableService())
+
+    request = APIRequestFactory().post(
+        "/api/chatbot/s1/response/",
+        {"message": "How are you?", "model_name": "gpt2"},
+        format="json",
+    )
+    response = chat_views.ChatbotGenerateResponseView.as_view()(request, session_id="s1")
+
+    assert response.status_code == 503
+    assert response.data["error"]["code"] == "model_session_unavailable"
+
+
+def test_chatbot_generate_response_maps_execution_errors(monkeypatch) -> None:
+    class _ExecutionFailureService(_FakeChatService):
+        def run_chat_turn(self, *, session_id: str, payload):
+            raise ChatExecutionError("execution failed")
+
+    monkeypatch.setattr(chat_views, "get_chat_service", lambda: _ExecutionFailureService())
+
+    request = APIRequestFactory().post(
+        "/api/chatbot/s1/response/",
+        {"message": "How are you?", "model_name": "gpt2"},
+        format="json",
+    )
+    response = chat_views.ChatbotGenerateResponseView.as_view()(request, session_id="s1")
+
+    assert response.status_code == 502
+    assert response.data["error"]["code"] == "execution_failure"
 
 def test_model_statistics_view_requires_models_parameter() -> None:
     request = APIRequestFactory().post("/api/model_statistics/", {}, format="json")
