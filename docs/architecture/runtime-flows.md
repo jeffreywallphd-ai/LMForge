@@ -10,15 +10,19 @@ sequenceDiagram
   participant LLM as Transformers Model
 
   U->>API: POST /api/chatbot/{session_id}/response/
-  API->>DB: save user message
-  API->>LLM: load/cache model + generate response
-  API->>DB: save bot response
+  API->>APP: run_chat_turn(session_id, payload)
+  APP->>APP: validate payload + normalize generation config
+  APP->>LLM: get model session via ChatModelSessionProvider
+  APP->>LLM: generate response
+  APP->>DB: save user message
+  APP->>DB: save bot response
   API-->>U: response + generation params
 ```
 
 Notes:
-- Chat endpoint now delegates generation/session persistence to `ChatService`.
-- API view remains responsible for HTTP contract mapping only.
+- Chat endpoint delegates validation, model/session access, generation, and persistence to `ChatService`.
+- `ChatModelSessionProvider` centralizes model/tokenizer loading and per-process reuse to avoid duplicated loader paths.
+- API view remains responsible for HTTP contract mapping only (e.g., `invalid_input` -> 400, unavailable session -> 503, execution failure -> 502).
 
 ## 2) Scraping Vertical Slice (Service + API + Web)
 
