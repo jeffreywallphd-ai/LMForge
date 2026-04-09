@@ -45,7 +45,7 @@ Defines reusable use-case logic.
 - Services encapsulate focused operations (chat generation, dataset generation, training/eval validation, export, vector store operations, document processing).
 - Scraping now uses an explicit service contract (`ScrapingService`) consumed by both API and web handlers.
 - Workflows orchestrate end-to-end operations (document ingestion, dataset generation, embedding storage, training prep, evaluation runs).
-- Current state: abstractions exist but are only partially adopted by presentation views.
+- Current state: abstractions exist and are incrementally adopted by presentation views; chat now routes through `ChatService` while dataset/training/evaluation still have legacy hotspots.
 
 ### Domain Layer
 
@@ -95,3 +95,4 @@ A detailed inventory of current API/web presentation boundary violations and mig
 
 Use these documents as the source of truth for Story 2 presentation refactors and response/template/static contract consistency.
 - `docs/architecture/presentation-layer-guide.md`
+- `docs/architecture/service-layer-audit.md`
