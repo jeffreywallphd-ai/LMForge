@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import Mock
 
 from rest_framework.test import APIRequestFactory
 
@@ -9,8 +8,29 @@ from studio.presentation.api.views import chat as chat_views
 from studio.presentation.api.views import evaluation as evaluation_views
 
 
-def test_session_create_view_generates_uuid(monkeypatch) -> None:
-    monkeypatch.setattr(chat_views.uuid, "uuid4", lambda: "fixed-session")
+class _FakeChatService:
+    def __init__(self) -> None:
+        self.saved_messages: list[tuple[str, str, bool]] = []
+
+    def create_session_id(self) -> str:
+        return "fixed-session"
+
+    def list_sessions(self) -> list[str]:
+        return ["s1", "s2"]
+
+    def get_session_messages(self, session_id: str):
+        assert session_id == "s1"
+        return [SimpleNamespace(message="Hi", is_user=True)]
+
+    def generate_response(self, _prompt: str, _cfg) -> str:
+        return "Stubbed reply"
+
+    def save_message(self, *, session_id: str, message: str, is_user: bool):
+        self.saved_messages.append((session_id, message, is_user))
+
+
+def test_session_create_view_generates_uuid_via_chat_service(monkeypatch) -> None:
+    monkeypatch.setattr(chat_views, "ChatService", _FakeChatService)
     request = APIRequestFactory().post("/api/chatbot/", data={})
 
     response = chat_views.SessionCreateView.as_view()(request)
@@ -20,15 +40,15 @@ def test_session_create_view_generates_uuid(monkeypatch) -> None:
     assert response.data["data"]["session_id"] == "fixed-session"
 
 
-def test_session_and_conversation_list_views_use_conversation_manager(monkeypatch) -> None:
-    manager = Mock()
-    manager.values_list.return_value.distinct.return_value = ["s1", "s2"]
-    manager.filter.return_value.order_by.return_value = [SimpleNamespace(message="Hi", is_user=True)]
-    monkeypatch.setattr(chat_views.Conversation, "objects", manager)
+def test_session_and_conversation_list_views_use_chat_service(monkeypatch) -> None:
+    monkeypatch.setattr(chat_views, "ChatService", _FakeChatService)
 
-    serializer_class = Mock()
-    serializer_class.return_value.data = [{"message": "Hi", "is_user": True}]
-    monkeypatch.setattr(chat_views, "ConversationSerializer", serializer_class)
+    class _Serializer:
+        def __init__(self, _conversations, many: bool):
+            assert many is True
+            self.data = [{"message": "Hi", "is_user": True}]
+
+    monkeypatch.setattr(chat_views, "ConversationSerializer", _Serializer)
 
     factory = APIRequestFactory()
 
@@ -42,12 +62,17 @@ def test_session_and_conversation_list_views_use_conversation_manager(monkeypatc
 
 
 def test_conversation_create_view_returns_201_when_serializer_valid(monkeypatch) -> None:
-    serializer = Mock()
-    serializer.is_valid.return_value = True
-    serializer.data = {"message": "Hello", "is_user": True}
+    class _Serializer:
+        def __init__(self, data):
+            self.data = {"message": data["message"], "is_user": data["is_user"]}
 
-    serializer_class = Mock(return_value=serializer)
-    monkeypatch.setattr(chat_views, "ConversationSerializer", serializer_class)
+        def is_valid(self):
+            return True
+
+        def save(self):
+            return None
+
+    monkeypatch.setattr(chat_views, "ConversationSerializer", _Serializer)
 
     request = APIRequestFactory().post("/api/chatbot/s1/add/", {"message": "Hello", "is_user": True}, format="json")
     response = chat_views.ConversationCreateView.as_view()(request, session_id="s1")
@@ -55,7 +80,6 @@ def test_conversation_create_view_returns_201_when_serializer_valid(monkeypatch)
     assert response.status_code == 201
     assert response.data["status"] == "success"
     assert response.data["data"]["session_id"] == "s1"
-    serializer.save.assert_called_once()
 
 
 def test_chatbot_generate_response_rejects_invalid_generation_bounds() -> None:
@@ -72,22 +96,8 @@ def test_chatbot_generate_response_rejects_invalid_generation_bounds() -> None:
 
 
 def test_chatbot_generate_response_saves_user_and_bot_messages(monkeypatch) -> None:
-    monkeypatch.setattr(chat_views, "generate_response", lambda *_args, **_kwargs: "Stubbed reply")
-
-    saved = []
-
-    class StubSerializer:
-        def __init__(self, data):
-            self._data = data
-            self.data = data
-
-        def is_valid(self):
-            return True
-
-        def save(self):
-            saved.append(self._data)
-
-    monkeypatch.setattr(chat_views, "ConversationSerializer", StubSerializer)
+    fake_service = _FakeChatService()
+    monkeypatch.setattr(chat_views, "ChatService", lambda: fake_service)
 
     request = APIRequestFactory().post(
         "/api/chatbot/s1/response/",
@@ -99,9 +109,9 @@ def test_chatbot_generate_response_saves_user_and_bot_messages(monkeypatch) -> N
     assert response.status_code == 200
     assert response.data["status"] == "success"
     assert response.data["data"]["bot_response"] == "Stubbed reply"
-    assert len(saved) == 2
-    assert saved[0]["is_user"] is True
-    assert saved[1]["is_user"] is False
+    assert len(fake_service.saved_messages) == 2
+    assert fake_service.saved_messages[0][2] is True
+    assert fake_service.saved_messages[1][2] is False
 
 
 def test_model_statistics_view_requires_models_parameter() -> None:

@@ -17,8 +17,8 @@ sequenceDiagram
 ```
 
 Notes:
-- Active endpoint logic is view-centric.
-- Equivalent service abstraction exists in `ChatService`.
+- Chat endpoint now delegates generation/session persistence to `ChatService`.
+- API view remains responsible for HTTP contract mapping only.
 
 ## 2) Scraping Vertical Slice (Service + API + Web)
 

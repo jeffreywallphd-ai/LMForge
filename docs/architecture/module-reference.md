@@ -97,3 +97,9 @@ Tests are present for selected services/infrastructure and endpoint-level workfl
 - API-only handlers belong in `src/studio/presentation/api/views/*` and should return JSON/DRF responses only.
 - Root routing split is enforced by `src/config/urls_web.py` and `src/config/urls_api.py`.
 - Known exceptions and migration targets are tracked in `docs/architecture/presentation-boundary-audit.md`.
+
+
+## Service-Layer Guidance
+
+- Service boundary inventory and migration checklist: `docs/architecture/service-layer-audit.md`.
+- Presentation placement and endpoint surface rules: `docs/architecture/presentation-layer-guide.md`.
