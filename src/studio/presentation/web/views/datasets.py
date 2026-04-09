@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from studio.models import SourceDocumentMetadata as ScrapedDataMeta
+from studio.domain.models import SourceDocumentMetadata
 from studio.presentation.web.forms.documents import DocumentForm
 from django.core.paginator import Paginator
 from decouple import config
@@ -9,7 +9,7 @@ DEFAULT_HF_ACCOUNT = config("HF_ACCOUNT_NAME", default=None)
 
 def dataset_workflow_view(request):
     messages = []
-    documents_list = ScrapedDataMeta.objects.all().order_by('-created_at')  # Order by latest entries
+    documents_list = SourceDocumentMetadata.objects.all().order_by('-created_at')  # Order by latest entries
 
     # Apply pagination (10 documents per page)
     paginator = Paginator(documents_list, 10)

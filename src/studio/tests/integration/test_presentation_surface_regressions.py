@@ -58,7 +58,7 @@ def test_scraping_web_flow_stays_template_oriented(monkeypatch) -> None:
             return None
 
     monkeypatch.setattr(web_scraping, "ScrapingService", _FakeService)
-    monkeypatch.setattr(web_scraping.ScrapedData.objects, "order_by", lambda *_a, **_k: _FakeQuerySet())
+    monkeypatch.setattr(web_scraping.SourceDocument.objects, "order_by", lambda *_a, **_k: _FakeQuerySet())
 
     request = RequestFactory().post(
         "/scraping/",
@@ -87,7 +87,7 @@ def test_scraping_web_flow_maps_service_errors_to_template_feedback(monkeypatch)
             return None
 
     monkeypatch.setattr(web_scraping, "ScrapingService", _FakeService)
-    monkeypatch.setattr(web_scraping.ScrapedData.objects, "order_by", lambda *_a, **_k: _FakeQuerySet())
+    monkeypatch.setattr(web_scraping.SourceDocument.objects, "order_by", lambda *_a, **_k: _FakeQuerySet())
 
     request = RequestFactory().post(
         "/scraping/",

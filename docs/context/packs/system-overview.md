@@ -21,6 +21,7 @@
 - Database configuration is environment-driven via `DATABASE_*` variables with no implicit SQLite fallback in base settings.
 - Root URL configuration has a single web entry point at `/` (with API mounted at `/api/`).
 - `src/studio/models.py` re-exports domain models for Django app compatibility.
+- Domain model imports in application/presentation/tests should use `from studio.domain.models import ...` (see `docs/context/domain-model-stabilization.md`).
 - API URL config includes current endpoints plus legacy-compatible UI route aliases.
 
 ## Architectural Direction

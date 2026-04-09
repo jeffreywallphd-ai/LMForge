@@ -5,20 +5,24 @@ from datetime import date, datetime
 import pytest
 from django.core.exceptions import ValidationError
 
-from studio.domain.models.conversations import Conversation
-from studio.domain.models.dataset_artifacts import (
+from studio.domain.models import (
     Answer,
+    Conversation,
     DatasetArtifact,
+    EvaluationRun,
+    License,
+    ModelStats,
+    ProcessedDocument,
     Question,
     ReviewAnswer,
     Reviewer,
+    Source,
+    SourceDocument,
+    SourceDocumentMetadata,
+    TrainingRun,
+    ValidityLevel,
+    VectorCollection,
 )
-from studio.domain.models.evaluation_runs import EvaluationRun
-from studio.domain.models.model_stats import ModelStats
-from studio.domain.models.processed_documents import License, ProcessedDocument, Source, ValidityLevel
-from studio.domain.models.source_documents import SourceDocument, SourceDocumentMetadata
-from studio.domain.models.training_runs import TrainingRun
-from studio.domain.models.vector_collections import VectorCollection
 from studio.domain.policies.dataset_rules import validate_dataset_request
 from studio.domain.policies.evaluation_rules import validate_evaluation_run
 from studio.domain.policies.training_rules import validate_training_run

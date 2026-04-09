@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from studio.domain.models.evaluation_runs import EvaluationRun
+from studio.domain.models import EvaluationRun
 
 
 def validate_evaluation_run(config: EvaluationRun) -> None:

@@ -21,6 +21,7 @@ def test_domain_package_exports_expected_symbols():
         "SourceDocument",
         "SourceDocumentMetadata",
         "TrainingRun",
+        "ValidityLevel",
         "VectorCollection",
     }
     assert set(domain_model_exports) == expected

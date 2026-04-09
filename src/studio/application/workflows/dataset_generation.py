@@ -7,7 +7,7 @@ from typing import Any, Callable
 
 from studio.application.services.dataset_service import DatasetGenerationRequest, DatasetService
 from studio.application.services.export_service import ExportService
-from studio.domain.models.source_documents import SourceDocument
+from studio.domain.models import SourceDocument
 
 
 @dataclass(slots=True)

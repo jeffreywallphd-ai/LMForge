@@ -80,3 +80,4 @@ Deliverables:
 - `packs/embedding-and-vectorstore.md`
 - `packs/training-and-finetuning.md`
 - `packs/model-evaluation.md`
+- `domain-model-stabilization.md` (domain model import, naming, and migration guardrails)

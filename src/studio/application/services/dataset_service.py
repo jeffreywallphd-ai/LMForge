@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from studio.application.services.document_service import DocumentService
-from studio.domain.models.source_documents import SourceDocument
+from studio.domain.models import SourceDocument
 from studio.domain.policies.dataset_rules import validate_dataset_request
 
 

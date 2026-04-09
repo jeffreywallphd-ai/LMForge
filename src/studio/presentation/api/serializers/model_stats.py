@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from studio.models import ModelStats
+from studio.domain.models import ModelStats
 
 
 class ModelStatsSerializer(serializers.ModelSerializer):
