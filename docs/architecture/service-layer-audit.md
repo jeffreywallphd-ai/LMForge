@@ -161,7 +161,7 @@ Conventions:
 - [x] Chat validation/error categories centralized in service layer with typed outcomes mapped by views.
 - [ ] Extract PDF/manual text save behavior from scraping API views into service/workflow contracts.
 - [ ] Route dataset collection/chunk orchestration through `EmbeddingStorageWorkflow` from views.
-- [ ] Move training orchestration out of API view into `ModelTrainingWorkflow` plus service contracts.
+- [x] Move training orchestration out of API view into `TrainingService`/`ModelTrainingWorkflow` contracts with explicit config->execution->persistence boundaries.
 - [ ] Route evaluation endpoint through `ModelEvaluationWorkflow` and keep view as response adapter.
 - [ ] Add unit tests per extracted service contract and integration tests per endpoint contract.
 
@@ -204,3 +204,21 @@ Persistence handoff is explicit:
 - `DatasetService.generate_dataset(..., persist_artifact=...)` accepts an optional callback.
 - Callers decide whether persistence occurs and how artifacts are saved.
 - The callback return metadata is surfaced as `persisted_artifact` in the service and workflow result contracts.
+
+
+## Story 3.4 Training Boundary Updates
+
+The training slice now uses a dedicated application service orchestration boundary:
+
+- `TrainingService.assemble_config(...)` handles request-agnostic normalization into `TrainingRun`.
+- `TrainingService.prepare_training(...)` handles model-size lookup, policy validation, precision resolution, and target-module selection.
+- `TrainingService.orchestrate_training(...)` performs explicit handoff to:
+  - `TrainingExecutor` for runtime execution
+  - `TrainingResultStore` for persistence of execution outcomes
+
+This separates three previously entangled concerns:
+1. input/config construction
+2. runtime training execution
+3. execution-result persistence
+
+Presentation views now call service/workflow contracts and map HTTP responses only.

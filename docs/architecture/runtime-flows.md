@@ -99,21 +99,34 @@ sequenceDiagram
 Notes:
 - Missing Qdrant dependency or connectivity returns graceful no-op/empty outcomes.
 
-## 5) Training Preparation Flow
+## 5) Training Orchestration Flow
 
 ```mermaid
 sequenceDiagram
   participant U as Client
-  participant API as Training View/Workflow
+  participant P as API/Web Training Handler
   participant APP as TrainingService
+  participant EXE as TrainingExecutor (infra seam)
+  participant REP as TrainingResultStore (repo/gateway)
   participant HF as HuggingFace Hub
 
-  U->>API: training config payload
-  API->>APP: build config dataclass
+  U->>P: training form/json payload
+  P->>APP: orchestrate_training(payload)
+  APP->>APP: assemble_config(payload)
   APP->>HF: resolve model size (best effort)
-  APP->>APP: apply policy validation + precision resolution
-  API-->>U: validated training plan
+  APP->>APP: validate policy + resolve precision + target modules
+  APP->>EXE: execute(config, precision, target_modules)
+  EXE-->>APP: TrainingExecutionResult
+  APP->>REP: save(config, plan, execution, failure_kind)
+  REP-->>APP: persisted metadata
+  APP-->>P: TrainingOrchestrationResult
+  P-->>U: HTTP response mapping only
 ```
+
+Notes:
+- `TrainingService` now owns explicit lifecycle boundaries: config assembly, validation/preparation, execution handoff, and persistence handoff.
+- Presentation handlers no longer coordinate runtime setup directly; they map request/response contracts.
+- Execution and persistence are separate collaborators so long-running training and storage can evolve independently.
 
 ## 6) Evaluation Flow
 
