@@ -40,6 +40,28 @@ def test_scraping_service_returns_validation_error_for_missing_url() -> None:
     assert result.error.code == "validation_error"
 
 
+def test_scraping_service_rejects_non_http_url() -> None:
+    service = ScrapingService(document_service=_FakeDocumentService(), reddit_scraper=_FakeRedditScraper())
+
+    result = service.execute(ScrapeRequest(url="ftp://example.com", title="x", source_type="generic"))
+
+    assert result.ok is False
+    assert result.error is not None
+    assert result.error.code == "validation_error"
+    assert "http(s)" in result.error.message
+
+
+def test_scraping_service_rejects_non_reddit_url_for_reddit_source() -> None:
+    service = ScrapingService(document_service=_FakeDocumentService(), reddit_scraper=_FakeRedditScraper())
+
+    result = service.execute(ScrapeRequest(url="https://example.com/post", title="", source_type="reddit"))
+
+    assert result.ok is False
+    assert result.error is not None
+    assert result.error.code == "validation_error"
+    assert "reddit.com" in result.error.message
+
+
 def test_scraping_service_scrapes_generic_and_persists() -> None:
     document_service = _FakeDocumentService()
     service = ScrapingService(document_service=document_service, reddit_scraper=_FakeRedditScraper())
@@ -64,3 +86,17 @@ def test_scraping_service_uses_reddit_scraper_path_and_normalizes_content() -> N
     assert result.data.file_type == "reddit_post"
     assert result.data.title == "reddit-title"
     assert "😀" not in result.data.content
+
+
+def test_scraping_service_maps_unexpected_errors() -> None:
+    class _ExplodingDocumentService(_FakeDocumentService):
+        def scrape_generic_url(self, url: str, title: str = "") -> ScrapedPayload:
+            raise Exception("unexpected")
+
+    service = ScrapingService(document_service=_ExplodingDocumentService(), reddit_scraper=_FakeRedditScraper())
+
+    result = service.execute(ScrapeRequest(url="https://example.com", title="", source_type="generic"))
+
+    assert result.ok is False
+    assert result.error is not None
+    assert result.error.code == "unexpected_error"

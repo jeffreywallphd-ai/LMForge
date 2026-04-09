@@ -70,3 +70,4 @@ Validation failures use the same error shape with `code = "validation_error"` an
 
 - Validation failures return HTTP `400` with `error.code = "validation_error"`.
 - Scraper/infrastructure failures return HTTP `502` with `error.code = "scrape_failed"`.
+- Unexpected internal failures return HTTP `500` with `error.code = "scrape_unexpected_failure"`.

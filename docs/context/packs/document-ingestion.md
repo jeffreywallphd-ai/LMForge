@@ -20,7 +20,9 @@
 ## Core Facts
 
 - `DocumentService` standardizes scrape and chunk-oriented preprocessing, including emoji removal and title normalization.
-- `ScrapingService` defines explicit scraping request/result contracts and maps validation/upstream errors for both API and web handlers.
+- `ScrapingService` defines explicit scraping request/result contracts and centralizes scrape orchestration for API and web handlers.
+- `ScrapingService` owns non-HTTP validation (required URL, http/https scheme, supported `source_type`, and reddit URL constraints for `source_type=reddit`).
+- `ScrapingService` returns consistent outcome semantics: `validation_error`, `upstream_error`, or `unexpected_error`.
 - Workflow wrapper (`DocumentIngestionWorkflow`) supports scrape-only and scrape-and-persist paths.
 - Domain persistence uses `SourceDocument` and optional metadata projection table.
 - Infrastructure includes specialized content extraction heuristics for web pages and utilities for PDF text extraction.

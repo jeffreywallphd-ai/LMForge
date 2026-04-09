@@ -36,7 +36,8 @@ sequenceDiagram
   participant DB as SourceDocument
 
   U->>API: POST/GET /api/scrape (url,title,source_type)
-  API->>APP: validate + normalize request
+  API->>APP: adapt HTTP payload to ScrapeRequest
+  APP->>APP: normalize + validate request (url/source_type rules)
   APP->>DOC: dispatch generic/reddit scrape path
   DOC->>INF: extract content + metadata
   APP->>DOC: persist normalized SourceDocument
@@ -47,6 +48,7 @@ sequenceDiagram
 Notes:
 - `ScrapingService` is the application boundary for URL scraping concerns.
 - API and web surfaces map the same service result into different contracts (JSON vs template context).
+- API maps `validation_error -> 400`, `upstream_error -> 502`, and `unexpected_error -> 500` without re-implementing scrape orchestration in the view.
 
 ## 3) Dataset Generation Flow
 

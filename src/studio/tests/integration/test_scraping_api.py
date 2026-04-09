@@ -76,3 +76,24 @@ def test_scrape_api_upstream_error_maps_to_gateway_error(monkeypatch) -> None:
     assert response.status_code == 502
     assert response.data["status"] == "error"
     assert response.data["error"]["code"] == "scrape_failed"
+
+
+def test_scrape_api_unexpected_error_maps_to_internal_error(monkeypatch) -> None:
+    from studio.presentation.api.views import scraping as scraping_views
+
+    class _FakeService:
+        def execute(self, _request):
+            return types.SimpleNamespace(
+                ok=False,
+                data=None,
+                error=types.SimpleNamespace(code="unexpected_error", message="unexpected"),
+            )
+
+    monkeypatch.setattr(scraping_views, "ScrapingService", _FakeService)
+
+    request = APIRequestFactory().post("/api/scrape/", {"url": "https://example.com"}, format="json")
+    response = scraping_views.ScrapeDataView.as_view()(request)
+
+    assert response.status_code == 500
+    assert response.data["status"] == "error"
+    assert response.data["error"]["code"] == "scrape_unexpected_failure"
