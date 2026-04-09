@@ -1,7 +1,6 @@
 """Base settings for the standalone src-based Django project."""
 
 import os
-import sys
 from decouple import config
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -72,41 +71,13 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS: list[str] = []
 CORS_ALLOW_CREDENTIALS = True
 
-DB_NAME = config('DATABASE_NAME', default='')
-DB_USER = config('DATABASE_USER', default='')
-DB_PASSWORD = config('DATABASE_PASSWORD', default='')
-DB_HOST = config('DATABASE_HOST', default='')
-DB_PORT = config('DATABASE_PORT', default='3306')
-
-def _looks_placeholder(v: str) -> bool:
-    v = (v or '').strip().lower()
-    return v in {'', 'password', 'changeme', 'your_db', 'your_user', 'localhost'}
-
-RUNNING_DEV_SERVER = 'runserver' in sys.argv
-MISSING_OR_PLACEHOLDER = (
-    _looks_placeholder(DB_NAME)
-    or _looks_placeholder(DB_USER)
-    or _looks_placeholder(DB_HOST)
-    or DB_PASSWORD.strip() == ''
-)
-
-USE_SQLITE_FALLBACK = DEBUG and (RUNNING_DEV_SERVER or 'migrate' in sys.argv) and MISSING_OR_PLACEHOLDER
-
-if USE_SQLITE_FALLBACK:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': config('DATABASE_ENGINE', default='django.db.backends.mysql'),
+        'NAME': config('DATABASE_NAME', default=''),
+        'USER': config('DATABASE_USER', default=''),
+        'PASSWORD': config('DATABASE_PASSWORD', default=''),
+        'HOST': config('DATABASE_HOST', default=''),
+        'PORT': config('DATABASE_PORT', default='3306'),
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': DB_NAME,
-            'USER': DB_USER,
-            'PASSWORD': DB_PASSWORD,
-            'HOST': DB_HOST,
-            'PORT': DB_PORT,
-        }
-    }
+}
