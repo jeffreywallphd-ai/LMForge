@@ -150,6 +150,6 @@
     "prefer_application_layer_for_new_logic": true,
     "avoid_extending_legacy_monolithic_views": true,
     "preserve_existing_db_table_names": true,
-    "default_database": "MySQL in non-fallback mode; SQLite fallback in dev/migrate/runserver"
+    "default_database": "Environment-driven via DATABASE_* settings with no implicit fallback"
   }
 }
