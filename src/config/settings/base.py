@@ -19,7 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'src.studio',
+    'studio',
 ]
 
 MIDDLEWARE = [
@@ -33,9 +33,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'src.config.urls'
-WSGI_APPLICATION = 'src.config.wsgi.application'
-ASGI_APPLICATION = 'src.config.asgi.application'
+ROOT_URLCONF = 'config.urls'
+WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 TEMPLATES = [
     {

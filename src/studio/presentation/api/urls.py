@@ -1,10 +1,10 @@
 from django.urls import path
 
-from src.studio.presentation.web.views.chat import chatbot_view
-from src.studio.presentation.web.views.datasets import dataset_workflow_document_processor, dataset_workflow_view
-from src.studio.presentation.web.views.home import home_view
-from src.studio.presentation.web.views.scraping import scrape_view
-from src.studio.presentation.web.views.settings import settings_view
+from studio.presentation.web.views.chat import chatbot_view
+from studio.presentation.web.views.datasets import dataset_workflow_document_processor, dataset_workflow_view
+from studio.presentation.web.views.home import home_view
+from studio.presentation.web.views.scraping import scrape_view
+from studio.presentation.web.views.settings import settings_view
 from .views.chat import ChatbotGenerateResponseView, ConversationCreateView, ConversationListView, SessionCreateView, SessionListView
 from .views.datasets import database_workflow
 from .views.evaluation import ModelStatisticsView

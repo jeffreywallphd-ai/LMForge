@@ -2,7 +2,7 @@ import types
 
 import pytest
 
-from src.studio.application.workflows.dataset_generation import DatasetGenerationWorkflow
+from studio.application.workflows.dataset_generation import DatasetGenerationWorkflow
 
 
 class _DatasetSvc:
@@ -68,7 +68,7 @@ def test_list_documents_returns_pagination(monkeypatch):
             return docs[slc]
 
     monkeypatch.setattr(
-        "src.studio.application.workflows.dataset_generation.SourceDocument.objects",
+        "studio.application.workflows.dataset_generation.SourceDocument.objects",
         _QS(),
     )
 

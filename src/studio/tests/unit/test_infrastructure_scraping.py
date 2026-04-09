@@ -3,13 +3,13 @@ import json
 import pytest
 from bs4 import BeautifulSoup
 
-from src.studio.infrastructure.scraping.content_extractor import (
+from studio.infrastructure.scraping.content_extractor import (
     _process_list_recursive,
     clean_plaintext_anysite,
     extract_article_content,
 )
-from src.studio.infrastructure.scraping.generic_web import GenericWebScraper
-from src.studio.infrastructure.scraping.reddit import RedditScraper
+from studio.infrastructure.scraping.generic_web import GenericWebScraper
+from studio.infrastructure.scraping.reddit import RedditScraper
 
 
 class _FakeResponse:
@@ -96,7 +96,7 @@ def test_generic_web_scraper_supports_structured_and_plain_types(monkeypatch):
     fake_csv = _FakeResponse(headers={"content-type": "text/csv"}, text="a,b")
 
     responses = [fake_json, fake_xml, fake_txt, fake_csv]
-    monkeypatch.setattr("src.studio.infrastructure.scraping.generic_web.requests.get", lambda *_a, **_k: responses.pop(0))
+    monkeypatch.setattr("studio.infrastructure.scraping.generic_web.requests.get", lambda *_a, **_k: responses.pop(0))
 
     json_result = scraper.scrape("https://e.com/data")
     xml_result = scraper.scrape("https://e.com/feed")
@@ -116,9 +116,9 @@ def test_generic_web_scraper_html_fallback_when_extractor_fails(monkeypatch):
     raw_html = b"<html><head><title>T</title></head><body><main><p>Hello fallback</p></main></body></html>"
     response = _FakeResponse(headers={"content-type": "text/html"}, content=raw_html)
 
-    monkeypatch.setattr("src.studio.infrastructure.scraping.generic_web.requests.get", lambda *_a, **_k: response)
+    monkeypatch.setattr("studio.infrastructure.scraping.generic_web.requests.get", lambda *_a, **_k: response)
     monkeypatch.setattr(
-        "src.studio.infrastructure.scraping.generic_web.extract_article_content",
+        "studio.infrastructure.scraping.generic_web.extract_article_content",
         lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("boom")),
     )
 
@@ -154,7 +154,7 @@ def test_reddit_scraper_dispatch_and_append_comments(monkeypatch):
         },
     ]
     monkeypatch.setattr(
-        "src.studio.infrastructure.scraping.reddit.requests.get",
+        "studio.infrastructure.scraping.reddit.requests.get",
         lambda *_a, **_k: _FakeResponse(json_data=post_payload),
     )
 

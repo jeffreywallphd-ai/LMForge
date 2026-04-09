@@ -1,7 +1,7 @@
 import types
 
-from src.studio.application.services.training_service import TrainingService
-from src.studio.domain.models.training_runs import TrainingRun
+from studio.application.services.training_service import TrainingService
+from studio.domain.models.training_runs import TrainingRun
 
 
 def test_get_model_size_uses_manual_map():
@@ -48,7 +48,7 @@ def test_validate_training_config_delegates(monkeypatch):
         seen["model_size"] = model_size
         seen["name"] = config.model_name
 
-    monkeypatch.setattr("src.studio.application.services.training_service.validate_training_run", _validate)
+    monkeypatch.setattr("studio.application.services.training_service.validate_training_run", _validate)
     cfg = TrainingRun(model_name="gpt2")
     service.validate_training_config(cfg, model_size=10)
     assert seen == {"model_size": 10, "name": "gpt2"}

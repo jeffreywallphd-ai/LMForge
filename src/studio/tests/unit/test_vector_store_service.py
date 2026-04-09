@@ -1,6 +1,6 @@
 import types
 
-from src.studio.application.services.vector_store_service import VectorStoreService
+from studio.application.services.vector_store_service import VectorStoreService
 
 
 class _QModels:

@@ -1,8 +1,8 @@
-from src.studio.domain.models import EvaluationRun, TrainingRun
-from src.studio.domain.models import __all__ as domain_model_exports
-from src.studio.domain.policies.dataset_rules import validate_dataset_request
-from src.studio.domain.policies.evaluation_rules import validate_evaluation_run
-from src.studio.domain.policies.training_rules import validate_training_run
+from studio.domain.models import EvaluationRun, TrainingRun
+from studio.domain.models import __all__ as domain_model_exports
+from studio.domain.policies.dataset_rules import validate_dataset_request
+from studio.domain.policies.evaluation_rules import validate_evaluation_run
+from studio.domain.policies.training_rules import validate_training_run
 
 
 def test_domain_package_exports_expected_symbols():

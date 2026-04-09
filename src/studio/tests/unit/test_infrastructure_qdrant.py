@@ -5,7 +5,7 @@ import pytest
 qdrant_client = pytest.importorskip("qdrant_client")
 pytest.importorskip("sentence_transformers")
 
-import src.studio.infrastructure.vectorstores.qdrant as qdrant
+import studio.infrastructure.vectorstores.qdrant as qdrant
 
 
 class _FakeClient:
@@ -37,8 +37,8 @@ def test_get_embedding_model_and_client_are_cached(monkeypatch):
     qdrant._embedding_model = None
     qdrant._qdrant_client = None
 
-    monkeypatch.setattr("src.studio.infrastructure.vectorstores.qdrant.SentenceTransformer", lambda *_a: _FakeModel())
-    monkeypatch.setattr("src.studio.infrastructure.vectorstores.qdrant.QdrantClient", lambda **_k: _FakeClient())
+    monkeypatch.setattr("studio.infrastructure.vectorstores.qdrant.SentenceTransformer", lambda *_a: _FakeModel())
+    monkeypatch.setattr("studio.infrastructure.vectorstores.qdrant.QdrantClient", lambda **_k: _FakeClient())
 
     first_model = qdrant.get_embedding_model()
     second_model = qdrant.get_embedding_model()

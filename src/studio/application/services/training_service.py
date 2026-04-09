@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from src.studio.domain.models.training_runs import TrainingRun
-from src.studio.domain.policies.training_rules import validate_training_run
+from studio.domain.models.training_runs import TrainingRun
+from studio.domain.policies.training_rules import validate_training_run
 
 
 TrainingConfig = TrainingRun

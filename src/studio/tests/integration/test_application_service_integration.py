@@ -1,9 +1,9 @@
 import types
 
-from src.studio.application.services.dataset_service import DatasetGenerationRequest, DatasetService
-from src.studio.application.services.document_service import DocumentService
-from src.studio.application.workflows.dataset_generation import DatasetGenerationWorkflow
-from src.studio.application.workflows.document_ingestion import DocumentIngestionWorkflow
+from studio.application.services.dataset_service import DatasetGenerationRequest, DatasetService
+from studio.application.services.document_service import DocumentService
+from studio.application.workflows.dataset_generation import DatasetGenerationWorkflow
+from studio.application.workflows.document_ingestion import DocumentIngestionWorkflow
 
 
 class _Parsed:
@@ -27,7 +27,7 @@ def test_document_ingestion_and_dataset_generation_integration(monkeypatch):
         return obj
 
     monkeypatch.setattr(
-        "src.studio.application.services.document_service.SourceDocument.objects.create",
+        "studio.application.services.document_service.SourceDocument.objects.create",
         _create,
     )
 
@@ -43,7 +43,7 @@ def test_document_ingestion_and_dataset_generation_integration(monkeypatch):
     dataset_service = DatasetService(document_service=document_service)
 
     monkeypatch.setattr(
-        "src.studio.application.services.dataset_service.SourceDocument.objects.filter",
+        "studio.application.services.dataset_service.SourceDocument.objects.filter",
         lambda **_kwargs: created_docs,
     )
     monkeypatch.setattr(

@@ -1,4 +1,4 @@
-from src.studio.application.services.export_service import ExportService
+from studio.application.services.export_service import ExportService
 
 
 def test_as_json_text_preserves_unicode():

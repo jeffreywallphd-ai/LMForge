@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from src.studio.domain.models.evaluation_runs import EvaluationRun
-from src.studio.domain.policies.evaluation_rules import validate_evaluation_run
+from studio.domain.models.evaluation_runs import EvaluationRun
+from studio.domain.policies.evaluation_rules import validate_evaluation_run
 
 
 EvaluationConfig = EvaluationRun

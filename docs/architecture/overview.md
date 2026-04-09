@@ -14,8 +14,8 @@ Excluded from architecture decisions here:
 ## 2) Runtime Stack
 
 - **Framework:** Django + Django REST Framework
-- **Primary app:** `src.studio`
-- **Entrypoint:** `manage.py` with default settings module `src.config.settings.development`
+- **Primary app:** `studio`
+- **Entrypoint:** `manage.py` with default settings module `config.settings.development`
 - **URL roots:**
   - Web routes mounted at `/` via `src/studio/presentation/web/urls.py`
   - API routes mounted at `/api/` via `src/studio/presentation/api/urls.py`

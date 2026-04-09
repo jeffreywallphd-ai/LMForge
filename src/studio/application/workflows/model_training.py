@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.studio.application.services.training_service import TrainingConfig, TrainingService
+from studio.application.services.training_service import TrainingConfig, TrainingService
 
 
 @dataclass(slots=True)

@@ -3,11 +3,11 @@ import types
 import pandas as pd
 import pytest
 
-from src.studio.application.services.document_service import ScrapedPayload
-from src.studio.application.workflows.document_ingestion import DocumentIngestionWorkflow
-from src.studio.application.workflows.embedding_storage import EmbeddingStorageWorkflow
-from src.studio.application.workflows.model_evaluation import ModelEvaluationWorkflow, ModelEvaluationWorkflowRequest
-from src.studio.application.workflows.model_training import ModelTrainingWorkflow
+from studio.application.services.document_service import ScrapedPayload
+from studio.application.workflows.document_ingestion import DocumentIngestionWorkflow
+from studio.application.workflows.embedding_storage import EmbeddingStorageWorkflow
+from studio.application.workflows.model_evaluation import ModelEvaluationWorkflow, ModelEvaluationWorkflowRequest
+from studio.application.workflows.model_training import ModelTrainingWorkflow
 
 
 class _DocSvc:
@@ -72,7 +72,7 @@ def test_embedding_storage_workflow_happy_paths(monkeypatch):
         def filter(self, **_kwargs):
             return docs
 
-    monkeypatch.setattr("src.studio.application.workflows.embedding_storage.SourceDocument.objects", _Mgr())
+    monkeypatch.setattr("studio.application.workflows.embedding_storage.SourceDocument.objects", _Mgr())
 
     workflow = EmbeddingStorageWorkflow(document_service=_DocSvc(), vector_store_service=_VectorSvc())
 
@@ -133,7 +133,7 @@ def test_model_evaluation_workflow_load_dataframe_validation(monkeypatch):
     workflow = ModelEvaluationWorkflow(evaluation_service=_EvalSvc())
 
     df = pd.DataFrame({"x": [1], "y": [2]})
-    monkeypatch.setattr("src.studio.application.workflows.model_evaluation.pd.read_csv", lambda _p: df)
+    monkeypatch.setattr("studio.application.workflows.model_evaluation.pd.read_csv", lambda _p: df)
 
     request = ModelEvaluationWorkflowRequest(models=["m"], dataset_file_path="/tmp/f.csv")
     with pytest.raises(ValueError, match="Input/Output"):

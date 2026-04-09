@@ -503,8 +503,8 @@ def train_encoder_view(request):
 from django.shortcuts import render
 from django.http import JsonResponse
 import numpy as np
-from src.studio.presentation.api.views.evaluation import cal_sts_score
-from src.studio.models import ModelStats
+from studio.presentation.api.views.evaluation import cal_sts_score
+from studio.models import ModelStats
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status

@@ -6,8 +6,8 @@ from dataclasses import dataclass
 import re
 from typing import Any
 
-from src.studio.domain.models.source_documents import SourceDocument
-from src.studio.infrastructure.scraping.generic_web import GenericWebScraper
+from studio.domain.models.source_documents import SourceDocument
+from studio.infrastructure.scraping.generic_web import GenericWebScraper
 
 
 EMOJI_RE = re.compile(r"[\U00010000-\U0010FFFF]")

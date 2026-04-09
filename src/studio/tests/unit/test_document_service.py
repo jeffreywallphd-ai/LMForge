@@ -1,6 +1,6 @@
 import types
 
-from src.studio.application.services.document_service import DocumentService, ScrapedPayload
+from studio.application.services.document_service import DocumentService, ScrapedPayload
 
 
 class _FakeParsed:
@@ -75,7 +75,7 @@ def test_persist_source_document_calls_model_manager(monkeypatch):
         return types.SimpleNamespace(id=7, **kwargs)
 
     monkeypatch.setattr(
-        "src.studio.application.services.document_service.SourceDocument.objects.create",
+        "studio.application.services.document_service.SourceDocument.objects.create",
         _create,
     )
 
