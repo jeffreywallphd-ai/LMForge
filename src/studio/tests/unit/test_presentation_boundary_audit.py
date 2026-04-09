@@ -86,9 +86,9 @@ def test_training_views_do_not_import_model_runtime_dependencies() -> None:
     assert violating_modules == []
 
 
-def test_training_views_depend_on_training_service_boundary() -> None:
+def test_training_views_depend_on_training_workflow_boundary() -> None:
     api_modules, _ = _parse_imports(API_VIEWS_DIR / "training.py")
     web_modules, _ = _parse_imports(WEB_VIEWS_DIR / "training.py")
 
-    assert "studio.application.services.training_service" in api_modules
-    assert "studio.application.services.training_service" in web_modules
+    assert "studio.application.workflows.model_training" in api_modules
+    assert "studio.application.workflows.model_training" in web_modules

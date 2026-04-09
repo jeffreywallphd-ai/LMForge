@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_on": "2026-04-08",
+  "generated_on": "2026-04-09",
   "scope": {
     "included": [
       "src/**",
@@ -37,7 +37,10 @@
         "template rendering",
         "serializer-based validation"
       ],
-      "depends_on": ["application", "domain"]
+      "depends_on": [
+        "application",
+        "domain"
+      ]
     },
     {
       "name": "application",
@@ -50,7 +53,10 @@
         "cross-module coordination",
         "policy invocation"
       ],
-      "depends_on": ["domain", "infrastructure"]
+      "depends_on": [
+        "domain",
+        "infrastructure"
+      ]
     },
     {
       "name": "domain",

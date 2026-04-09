@@ -27,6 +27,8 @@
 
 ## Architectural Direction
 
+- Final Feature 4 architecture reference: `docs/context/final-domain-workflow-testing-architecture.md`
+
 - Keep new business logic in `application/services` and `application/workflows`.
 - Treat `docs/context/workflow-conventions.md` as the workflow boundary contract when adding orchestration logic.
 - Keep domain rules in `domain/policies`.
