@@ -138,3 +138,18 @@ def test_model_evaluation_workflow_load_dataframe_validation(monkeypatch):
     request = ModelEvaluationWorkflowRequest(models=["m"], dataset_file_path="/tmp/f.csv")
     with pytest.raises(ValueError, match="Input/Output"):
         workflow._load_dataframe(request)
+
+
+def test_model_training_workflow_prepare_training_outcome_handles_validation_error():
+    workflow = ModelTrainingWorkflow()
+
+    outcome = workflow.prepare_training_outcome(
+        {
+            "model_name": "gpt2",
+            "train_test_split_ratio": "9",
+        }
+    )
+
+    assert outcome.ok is False
+    assert outcome.failure_kind == "validation_error"
+    assert "train_test_split_ratio" in outcome.error_message

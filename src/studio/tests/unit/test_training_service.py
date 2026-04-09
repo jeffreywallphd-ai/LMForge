@@ -185,3 +185,24 @@ def test_orchestrate_training_records_execution_failure_kind_when_executor_raise
     assert result.execution.status == "failed"
     assert "trainer crashed" in result.execution.detail
     assert store.saved["failure_kind"] == "execution_exception"
+
+
+def test_orchestrate_training_maps_prepare_validation_failures_without_raising():
+    service = TrainingService()
+
+    class _Executor:
+        def execute(self, **_kwargs):  # pragma: no cover - should never execute on validation failure
+            raise AssertionError("executor should not run when config is invalid")
+
+    result = service.orchestrate_training(
+        {
+            "model_name": "gpt2",
+            "train_test_split_ratio": "2",
+        },
+        executor=_Executor(),
+    )
+
+    assert result.ok is False
+    assert result.failure_kind == "validation_error"
+    assert result.execution.status == "invalid_config"
+    assert "train_test_split_ratio" in result.execution.detail

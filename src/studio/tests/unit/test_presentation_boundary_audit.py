@@ -70,3 +70,25 @@ def test_web_views_do_not_import_api_view_modules() -> None:
             violating_modules.append(module_path.name)
 
     assert violating_modules == []
+
+
+def test_training_views_do_not_import_model_runtime_dependencies() -> None:
+    """Guardrail: keep training runtime orchestration out of presentation modules."""
+
+    forbidden = {"torch", "transformers", "sentence_transformers", "huggingface_hub"}
+    violating_modules: list[str] = []
+
+    for module_path in [API_VIEWS_DIR / "training.py", WEB_VIEWS_DIR / "training.py"]:
+        imported_modules, _ = _parse_imports(module_path)
+        if any(mod == dep or mod.startswith(f"{dep}.") for mod in imported_modules for dep in forbidden):
+            violating_modules.append(module_path.name)
+
+    assert violating_modules == []
+
+
+def test_training_views_depend_on_training_service_boundary() -> None:
+    api_modules, _ = _parse_imports(API_VIEWS_DIR / "training.py")
+    web_modules, _ = _parse_imports(WEB_VIEWS_DIR / "training.py")
+
+    assert "studio.application.services.training_service" in api_modules
+    assert "studio.application.services.training_service" in web_modules

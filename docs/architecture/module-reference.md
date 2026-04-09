@@ -52,7 +52,8 @@
 - `document_ingestion.py` — scrape-only and scrape+persist orchestration.
 - `dataset_generation.py` — document selection to exported dataset artifacts.
 - `embedding_storage.py` — chunking to vector store operations.
-- `model_training.py` — training config assembly and preparatory plan.
+- `model_training.py` — training config assembly, preparatory plan creation, and normalized planning outcomes.
+- `training_adapters.py` — default training execution/storage collaborators used by presentation adapters.
 - `model_evaluation.py` — dataset loading/sampling and aggregate scoring per model.
 
 ## Domain Modules

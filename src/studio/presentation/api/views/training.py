@@ -10,45 +10,21 @@ from dataclasses import asdict
 
 from django.http import JsonResponse, StreamingHttpResponse
 
-from studio.application.services.training_service import TrainingExecutionResult, TrainingService
+from studio.application.services.training_service import TrainingService
 from studio.application.workflows.model_training import ModelTrainingWorkflow
+from studio.application.workflows.training_adapters import InMemoryTrainingResultStore, LocalTrainingExecutor
 
 
-class LocalTrainingExecutor:
-    """Infrastructure seam for local runtime training execution.
-
-    This implementation is intentionally lightweight in tests/development and can
-    be replaced by a queue-backed worker executor.
-    """
-
-    def execute(self, *, config, precision: str, target_modules: list[str]) -> TrainingExecutionResult:
-        return TrainingExecutionResult(
-            ok=True,
-            status="accepted",
-            detail="Training execution was accepted by the local executor.",
-            metadata={
-                "model_name": config.model_name,
-                "dataset_name": config.dataset_name,
-                "precision": precision,
-                "target_modules": target_modules,
-            },
-        )
+def get_training_service() -> TrainingService:
+    return TrainingService()
 
 
-class InMemoryTrainingResultStore:
-    """Explicit persistence boundary for training outcomes.
-
-    Replace with a DB-backed repository once training-run persistence model is finalized.
-    """
-
-    def save(self, **kwargs):
-        execution = kwargs["execution"]
-        return {
-            "status": execution.status,
-            "ok": execution.ok,
-            "failure_kind": kwargs.get("failure_kind"),
-            "model_name": kwargs["config"].model_name,
-        }
+def _status_for_orchestration(result) -> int:
+    if result.ok:
+        return 200
+    if result.failure_kind == "validation_error":
+        return 400
+    return 502
 
 
 def stream_training_output(_request):
@@ -69,14 +45,13 @@ def train_model_view(request):
     if request.method != "POST":
         return JsonResponse({"status": "success", "data": {"message": "Training page is web-only.", "next": "/training/"}})
 
-    service = TrainingService()
-    result = service.orchestrate_training(
+    result = get_training_service().orchestrate_training(
         request.POST.dict(),
         executor=LocalTrainingExecutor(),
         result_store=InMemoryTrainingResultStore(),
     )
 
-    status_code = 200 if result.ok else 400
+    status_code = _status_for_orchestration(result)
     return JsonResponse(
         {
             "status": "success" if result.ok else "error",
@@ -87,6 +62,7 @@ def train_model_view(request):
                 "target_modules": result.target_modules,
                 "execution": asdict(result.execution),
                 "persisted": result.persisted_record,
+                "failure_kind": result.failure_kind,
             },
         },
         status=status_code,
@@ -97,11 +73,16 @@ def train_model_workflow(request):
     if request.method != "POST":
         return JsonResponse({"status": "success", "data": {"message": "Training workflow page is web-only.", "next": "/training/"}})
 
-    workflow = ModelTrainingWorkflow()
-    try:
-        plan = workflow.prepare_training(request.POST.dict())
-    except ValueError as exc:
-        return JsonResponse({"status": "error", "message": str(exc)}, status=400)
+    plan = ModelTrainingWorkflow().prepare_training_outcome(request.POST.dict())
+    if not plan.ok:
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": plan.error_message,
+                "failure_kind": plan.failure_kind,
+            },
+            status=400,
+        )
 
     return JsonResponse(
         {

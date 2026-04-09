@@ -222,3 +222,51 @@ This separates three previously entangled concerns:
 3. execution-result persistence
 
 Presentation views now call service/workflow contracts and map HTTP responses only.
+
+## Story 3.4.4 Finalization: Training Views as Thin Adapters
+
+Training presentation handlers now use normalized service/workflow outcomes instead of local orchestration branches:
+
+- `presentation/api/views/training.py`
+  - Parses request payloads and delegates to `TrainingService.orchestrate_training(...)`.
+  - Maps normalized `failure_kind` values to API status codes (`validation_error -> 400`, execution failures -> 502).
+  - Delegates training-plan validation to `ModelTrainingWorkflow.prepare_training_outcome(...)` so presentation code no longer catches policy exceptions directly.
+- `presentation/web/views/training.py`
+  - Maintains template rendering responsibility.
+  - Adapts POST payloads to `TrainingService.orchestrate_training(...)` and maps success/failure detail to template context only.
+
+## Story 3.4.5: Service-layer Regression Tests and Guardrails
+
+The service-layer architecture is now protected by a combination of contract tests and architectural checks:
+
+1. **Service unit coverage**
+   - `test_chat_service.py`, `test_scraping_service.py`, `test_dataset_service.py`, and `test_training_service.py` cover normalization, validation, and failure semantics.
+2. **Presentation integration coverage**
+   - `test_training_api.py` verifies that training API/web handlers remain service adapters and preserve expected response/template behavior.
+3. **Architectural guardrails**
+   - `test_presentation_boundary_audit.py` now includes explicit training guardrails:
+     - Training views must not import model-runtime dependencies (`torch`, `transformers`, `sentence_transformers`, `huggingface_hub`).
+     - Training views must import/use the `TrainingService` boundary.
+
+These checks are intentionally lightweight and AST-based so they fail fast without brittle coupling to implementation details.
+
+## Story 3.4.6: Service-layer Usage Patterns (Final)
+
+### Service responsibilities
+
+- Keep business orchestration in `application/services/*`.
+- Use workflows (`application/workflows/*`) for composed use-cases and normalized planning outcomes.
+- Keep presentation handlers responsible for HTTP/form parsing and response mapping only.
+
+### Presentation-to-service interaction pattern
+
+1. Parse request payload into primitives.
+2. Call a service/workflow contract.
+3. Map normalized result fields (`ok`, `failure_kind`, `detail`) to API/template contracts.
+4. Avoid local runtime orchestration, dependency bootstrapping, or persistence branching in views.
+
+### Anti-patterns to reject
+
+- Training views importing model/runtime libraries directly.
+- View-level `try/except` policy handling where services/workflows already expose normalized outcomes.
+- Reintroducing configuration assembly and execution coordination in presentation modules.

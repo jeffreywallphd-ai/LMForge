@@ -153,25 +153,38 @@ class TrainingService:
         """Run explicit lifecycle: assemble config -> prepare/validate -> execute -> persist."""
 
         config = self.assemble_config(payload)
-        model_size, resolved_precision, target_modules = self.prepare_training(config, hf_token=hf_token)
 
         failure_kind: str | None = None
         try:
-            execution = executor.execute(
-                config=config,
-                precision=resolved_precision,
-                target_modules=target_modules,
-            )
-            if not execution.ok:
-                failure_kind = "execution_error"
-        except Exception as exc:  # pragma: no cover - classification path tested by assertion on returned result
+            model_size, resolved_precision, target_modules = self.prepare_training(config, hf_token=hf_token)
+        except ValueError as exc:
+            model_size = 0
+            resolved_precision = "unknown"
+            target_modules = []
             execution = TrainingExecutionResult(
                 ok=False,
-                status="failed",
+                status="invalid_config",
                 detail=str(exc),
                 metadata={},
             )
-            failure_kind = "execution_exception"
+            failure_kind = "validation_error"
+        else:
+            try:
+                execution = executor.execute(
+                    config=config,
+                    precision=resolved_precision,
+                    target_modules=target_modules,
+                )
+                if not execution.ok:
+                    failure_kind = "execution_error"
+            except Exception as exc:  # pragma: no cover - classification path tested by assertion on returned result
+                execution = TrainingExecutionResult(
+                    ok=False,
+                    status="failed",
+                    detail=str(exc),
+                    metadata={},
+                )
+                failure_kind = "execution_exception"
 
         persisted_record: dict[str, Any] | None = None
         if result_store is not None:
