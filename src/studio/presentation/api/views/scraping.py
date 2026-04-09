@@ -54,6 +54,13 @@ class ScrapeDataView(APIView):
         if result.error and result.error.code == "validation_error":
             return validation_error_response(result.error.message)
 
+        if result.error and result.error.code == "unexpected_error":
+            return error_response(
+                result.error.message,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                code="scrape_unexpected_failure",
+            )
+
         message = result.error.message if result.error else "Unexpected scraping failure."
         return error_response(
             message,

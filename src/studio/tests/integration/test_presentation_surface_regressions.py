@@ -69,3 +69,31 @@ def test_scraping_web_flow_stays_template_oriented(monkeypatch) -> None:
     assert response.status_code == 200
     assert response["Content-Type"].startswith("text/html")
     assert "Document saved from https://example.com" in response.content.decode()
+
+
+def test_scraping_web_flow_maps_service_errors_to_template_feedback(monkeypatch) -> None:
+    from studio.presentation.web.views import scraping as web_scraping
+
+    class _FakeService:
+        def execute(self, _request):
+            return types.SimpleNamespace(
+                ok=False,
+                data=None,
+                error=types.SimpleNamespace(code="validation_error", message="Please provide a URL."),
+            )
+
+    class _FakeQuerySet:
+        def first(self):
+            return None
+
+    monkeypatch.setattr(web_scraping, "ScrapingService", _FakeService)
+    monkeypatch.setattr(web_scraping.ScrapedData.objects, "order_by", lambda *_a, **_k: _FakeQuerySet())
+
+    request = RequestFactory().post(
+        "/scraping/",
+        data={"url": "", "title": "", "source_type": "generic"},
+    )
+    response = web_scraping.scrape_view(request)
+
+    assert response.status_code == 200
+    assert "Please provide a URL." in response.content.decode()

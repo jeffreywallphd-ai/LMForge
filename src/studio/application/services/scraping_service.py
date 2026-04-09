@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Literal
+from urllib.parse import urlparse
 
 from studio.application.services.document_service import DocumentService, ScrapedPayload
 from studio.infrastructure.scraping.reddit import RedditScraper
@@ -87,8 +88,10 @@ class ScrapingService:
             )
         except ValueError as exc:
             return ScrapeResult(ok=False, error=ScrapeErrorData(code="validation_error", message=str(exc)))
-        except Exception as exc:  # noqa: BLE001
+        except RuntimeError as exc:
             return ScrapeResult(ok=False, error=ScrapeErrorData(code="upstream_error", message=str(exc)))
+        except Exception as exc:  # noqa: BLE001
+            return ScrapeResult(ok=False, error=ScrapeErrorData(code="unexpected_error", message=str(exc)))
 
     def _normalize_and_validate(self, request: ScrapeRequest) -> ScrapeRequest | ScrapeResult:
         url = (request.url or "").strip()
@@ -111,6 +114,24 @@ class ScrapingService:
                 ),
             )
 
+        if not self._is_http_url(url):
+            return ScrapeResult(
+                ok=False,
+                error=ScrapeErrorData(
+                    code="validation_error",
+                    message="Please provide a valid http(s) URL.",
+                ),
+            )
+
+        if source_type == "reddit" and not self._is_reddit_url(url):
+            return ScrapeResult(
+                ok=False,
+                error=ScrapeErrorData(
+                    code="validation_error",
+                    message="Reddit scraping requires a reddit.com URL.",
+                ),
+            )
+
         return ScrapeRequest(url=url, title=title, source_type=source_type)
 
     def _scrape_reddit(self, url: str, title: str) -> ScrapedPayload:
@@ -126,3 +147,13 @@ class ScrapingService:
             title=final_title[: self.document_service.max_title_length],
             content=content,
         )
+
+    @staticmethod
+    def _is_http_url(url: str) -> bool:
+        parsed = urlparse(url)
+        return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+    @staticmethod
+    def _is_reddit_url(url: str) -> bool:
+        host = urlparse(url).netloc.lower()
+        return "reddit.com" in host
